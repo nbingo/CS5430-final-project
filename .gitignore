@@ -25,7 +25,6 @@ replay_pid*
 
 # IntelliJ stuff
 .idea/
-META-INF/
 CS5430-final-project.iml
 
 # ignore output
