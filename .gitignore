@@ -26,6 +26,7 @@ replay_pid*
 # IntelliJ stuff
 .idea/
 CS5430-final-project.iml
+.DS_Store
 
 # ignore output
 out/
