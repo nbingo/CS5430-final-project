@@ -14,6 +14,7 @@ public class Phase1StubImpl<K extends Serializable, V extends Serializable, M ex
   public Phase1StubImpl() throws IOException, NotBoundException {
     super();
     this.serverVerificationKey = super.serverVerificationKey;
+    this.network = super.network;
   }
 
   public Boolean registerUser(String userId) {
