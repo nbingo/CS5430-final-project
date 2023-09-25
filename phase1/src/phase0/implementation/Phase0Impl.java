@@ -4,7 +4,7 @@ import java.util.Dictionary;
 import java.util.Hashtable;
 
 public class Phase0Impl<K, V, M> implements Phase0<K, V, M> {
-  private final Dictionary<K, Value<V, M>> store;
+  private Dictionary<K, Value<V, M>> store;
 
   public Phase0Impl() {
     this.store = new Hashtable<K, Value<V, M>>();
