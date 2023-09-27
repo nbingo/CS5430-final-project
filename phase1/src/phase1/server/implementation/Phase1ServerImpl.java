@@ -8,7 +8,12 @@ import types.responses.AbstractAuthenticatedRegisterResponse;
 
 import java.io.IOException;
 import java.io.Serializable;
+import java.security.KeyFactory;
+import java.security.PrivateKey;
+import java.security.PublicKey;
 import java.security.Signature;
+import java.security.spec.PKCS8EncodedKeySpec;
+import java.security.spec.X509EncodedKeySpec;
 import java.util.Set;
 
 public class Phase1ServerImpl<K extends Serializable, V extends Serializable, M extends Serializable> extends Phase1ServerBase<K, V, M> {
@@ -24,13 +29,20 @@ public class Phase1ServerImpl<K extends Serializable, V extends Serializable, M 
     this.activeUsers = new HashSet<String>();
   }
 
+  private PrivateKey createPrivateKey(byte[] privateBytes) {
+    return KeyFactory.getInstance("DSA").generatePrivate(new PKCS8EncodedKeySpec(privateBytes));
+  }
+
+  private PublicKey createPublicKey(byte[] publicBytes) {
+    return KeyFactory.getInstance("DSA").generatePublic(new X509EncodedKeySpec(publicBytes));
+  }
+
   public AbstractAuthenticatedRegisterResponse authenticatedRegister(AbstractAuthenticatedRegisterRequest req) {
     Signature sign = Signature.getInstance("DSA");
-    sign.initVerify(req.verificationKey); // This is a byte [] but might need to be a PublicKey? Also, do we want to use the servers verification key???????
-    sign.update(req.userId);
+    sign.initVerify(this.createPublicKey(req.verificationKey));
+    sign.update(req.userId.getBytes());
     boolean valid = sign.verify(req.digitalSignature);
 
-    AbstractAuthenticatedRegisterResponse response;
     AbstractAuthenticatedRegisterResponse.Status status;
     if (!valid) {
       status = AbstractAuthenticatedRegisterResponse.Status.AuthenticationFailure;
@@ -41,12 +53,12 @@ public class Phase1ServerImpl<K extends Serializable, V extends Serializable, M 
       activeUsers.add(req.userId);
       status = AbstractAuthenticatedRegisterResponse.Status.OK;
     }
-    Signature server_sign = Signature.getInstance("DSA"); // ERROR?
-    server_sign.initSign(this.signingKey); // FIX TYPES
-    server_sign.update(status); // FIX TYPES
+    Signature server_sign = Signature.getInstance("DSA");
+    server_sign.initSign(this.createPrivateKey(this.signingKey));
+    server_sign.update(status.name().getBytes());
 
-    response = new AbstractAuthenticatedRegisterResponse(status, server_sign.sign());
-    return response;
+
+    return new AbstractAuthenticatedRegisterResponse(status, server_sign.sign());
   }
 
   public AbstractAuthenticatedDoResponse<K, V, M> authenticatedDo(AbstractAuthenticatedDoRequest<K, V, M> req) {
