@@ -8,6 +8,7 @@ import types.responses.AbstractAuthenticatedRegisterResponse;
 
 import java.io.IOException;
 import java.io.Serializable;
+import java.security.Signature;
 
 public class Phase1ServerImpl<K extends Serializable, V extends Serializable, M extends Serializable> extends Phase1ServerBase<K, V, M> {
 
@@ -25,18 +26,25 @@ public class Phase1ServerImpl<K extends Serializable, V extends Serializable, M 
   public AbstractAuthenticatedRegisterResponse authenticatedRegister(AbstractAuthenticatedRegisterRequest req) {
     Signature sign = Signature.getInstance("DSA");
     sign.initVerify(req.verificationKey); // This is a byte [] but might need to be a PublicKey? Also, do we want to use the servers verification key???????
+    sign.update(req.userId);
     boolean valid = sign.verify(req.digitalSignature);
 
     AbstractAuthenticatedRegisterResponse response;
+    AbstractAuthenticatedRegisterResponse.Status status;
     if (!valid) {
-      response = new AbstractAuthenticatedRegisterResponse(AbstractAuthenticatedRegisterResponse.Status.AuthenticationFailure, req.digitalSignature); // DOES THE SERVER SIGN HERE?
+      status = AbstractAuthenticatedRegisterResponse.Status.AuthenticationFailure;
     } else if (activeUsers.contains(req.userId)) {
-      response = new AbstractAuthenticatedRegisterResponse(AbstractAuthenticatedRegisterResponse.Status.UserAlreadyExists, req.digitalSignature); // DOES THE SERVER SIGN HERE?
+      status = AbstractAuthenticatedRegisterResponse.Status.UserAlreadyExists;
     }
     else {
       activeUsers.add(req.userId);
-      response = new AbstractAuthenticatedRegisterResponse(AbstractAuthenticatedRegisterResponse.Status.OK, req.digitalSignature); // DOES THE SERVER SIGN HERE?
+      status = AbstractAuthenticatedRegisterResponse.Status.OK;
     }
+    Signature server_sign = Signature.getInstance("DSA"); // ERROR?
+    server_sign.initSign(this.signingKey); // FIX TYPES
+    server_sign.update(status); // FIX TYPES
+
+    response = new AbstractAuthenticatedRegisterResponse(status, server_sign.sign());
     return response;
   }
 
