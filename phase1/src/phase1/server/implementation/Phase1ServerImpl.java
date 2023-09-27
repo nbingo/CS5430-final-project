@@ -9,12 +9,13 @@ import types.responses.AbstractAuthenticatedRegisterResponse;
 import java.io.IOException;
 import java.io.Serializable;
 import java.security.Signature;
+import java.util.Set;
 
 public class Phase1ServerImpl<K extends Serializable, V extends Serializable, M extends Serializable> extends Phase1ServerBase<K, V, M> {
 
   public final byte[] signingKey;
   public final byte[] verificationKey;
-  public Set<String> activeUsers; 
+  public Set<String> activeUsers;
 
   public Phase1ServerImpl() throws IOException { 
     super(); 
