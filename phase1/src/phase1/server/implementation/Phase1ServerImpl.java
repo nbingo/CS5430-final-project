@@ -14,19 +14,22 @@ import java.security.PublicKey;
 import java.security.Signature;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.X509EncodedKeySpec;
+import java.util.Dictionary;
+import java.util.HashSet;
+import java.util.Hashtable;
 import java.util.Set;
 
 public class Phase1ServerImpl<K extends Serializable, V extends Serializable, M extends Serializable> extends Phase1ServerBase<K, V, M> {
 
   public final byte[] signingKey;
   public final byte[] verificationKey;
-  public Set<String> activeUsers;
+  public Hashtable<String, byte[]> activeUsers;
 
   public Phase1ServerImpl() throws IOException { 
     super(); 
     this.signingKey = super.signingKey;
     this.verificationKey = super.verificationKey;
-    this.activeUsers = new HashSet<String>();
+    this.activeUsers = new Hashtable<>();
   }
 
   private PrivateKey createPrivateKey(byte[] privateBytes) {
@@ -46,11 +49,11 @@ public class Phase1ServerImpl<K extends Serializable, V extends Serializable, M 
     AbstractAuthenticatedRegisterResponse.Status status;
     if (!valid) {
       status = AbstractAuthenticatedRegisterResponse.Status.AuthenticationFailure;
-    } else if (activeUsers.contains(req.userId)) {
+    } else if (activeUsers.containsKey(req.userId)) {
       status = AbstractAuthenticatedRegisterResponse.Status.UserAlreadyExists;
     }
     else {
-      activeUsers.add(req.userId);
+      activeUsers.put(req.userId, req.verificationKey);
       status = AbstractAuthenticatedRegisterResponse.Status.OK;
     }
     Signature server_sign = Signature.getInstance("DSA");
@@ -62,7 +65,10 @@ public class Phase1ServerImpl<K extends Serializable, V extends Serializable, M 
   }
 
   public AbstractAuthenticatedDoResponse<K, V, M> authenticatedDo(AbstractAuthenticatedDoRequest<K, V, M> req) {
-    // implement me
+    Signature sign = Signature.getInstance("DSA");
+    sign.initVerify(this.createPublicKey(req.verificationKey)); // CONTINUE FROM HERE
+    sign.update(req.userId.getBytes());
+    boolean valid = sign.verify(req.digitalSignature);
     return null;
   }
 }
