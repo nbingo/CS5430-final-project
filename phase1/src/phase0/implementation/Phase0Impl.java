@@ -1,3 +1,5 @@
+package phase0.implementation;
+
 import java.lang.IllegalArgumentException;
 import java.util.NoSuchElementException;
 import java.util.Dictionary;
@@ -48,18 +50,5 @@ public class Phase0Impl<K, V, M> implements Phase0<K, V, M> {
 
   public void delete(K key) {
     this.store.remove(key);
-  }
-
-  public static void main(String[] args) {
-    Phase0Impl<String, String, String> example = new Phase0Impl<String, String, String>();
-    example.create("ohBoy", "boy", "supercool");
-    System.out.println(example.readMetaVal("ohBoy"));
-    System.out.println(example.readVal("ohBoy"));
-    example.writeVal("ohBoy", "girl");
-    example.writeMetaVal("ohBoy", "cheese");
-    System.out.println(example.readMetaVal("ohBoy"));
-    System.out.println(example.readVal("ohBoy"));
-    example.delete("ohBoy");
-    example.writeMetaVal("ohBoy", "cheese");
   }
 }

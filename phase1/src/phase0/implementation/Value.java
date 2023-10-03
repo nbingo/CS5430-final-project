@@ -1,4 +1,6 @@
-public class Value<V, M> {  
+package phase0.implementation;
+
+public class Value<V, M> {
   private V val;
   private M metaVal; 
 
