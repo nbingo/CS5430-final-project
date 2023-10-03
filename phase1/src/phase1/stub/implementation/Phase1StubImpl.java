@@ -43,10 +43,15 @@ public class Phase1StubImpl<K extends Serializable, V extends Serializable, M ex
   }
 
   private byte[] createSignature(PrivateKey privateKey, byte[] contents) throws NoSuchAlgorithmException, InvalidKeyException, SignatureException {
-    Signature server_sign = Signature.getInstance("DSA");
-    server_sign.initSign(privateKey);
-    server_sign.update(contents); // For now – add security later
-    return server_sign.sign();
+    try {
+      Signature server_sign = Signature.getInstance("DSA");
+      server_sign.initSign(privateKey);
+      server_sign.update(contents); // For now – add security later
+      return server_sign.sign();
+    } catch (Exception e) {
+      System.out.println("We fucked up in createSignature" + e.toString());
+      return null;
+    }
   }
 
   private boolean verifySignature(PublicKey publicKey, byte[] contents, byte[] signature) throws NoSuchAlgorithmException, InvalidKeyException, SignatureException {
@@ -68,6 +73,7 @@ public class Phase1StubImpl<K extends Serializable, V extends Serializable, M ex
       this.userKeys.put(userId, keyPair);
 
       byte[] signature = this.createSignature(keyPair.getPrivate(), userId.getBytes()); //TODO: Don't just sign userID
+      System.out.println("okay but did we get here? I think no");
 
       AbstractAuthenticatedRegisterRequest req = new AuthenticatedRegisterRequest(userId, keyPair.getPublic().getEncoded(), signature);
 
@@ -75,8 +81,10 @@ public class Phase1StubImpl<K extends Serializable, V extends Serializable, M ex
 
       boolean valid = this.verifySignature(this.createPublicKey(this.serverVerificationKey), response.status.name().getBytes(), response.digitalSignature); //TODO: Contents to verify will change
 
+      System.out.println("Valid: " + valid);
       return valid && response.status == AbstractAuthenticatedRegisterResponse.Status.OK;
     } catch (Exception e) {
+      System.out.println("registerUser went to shit (we're in catch).");
       return false;
     }
   }
