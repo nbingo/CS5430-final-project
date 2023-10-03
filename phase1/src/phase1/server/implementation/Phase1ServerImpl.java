@@ -8,6 +8,8 @@ import types.requests.AbstractAuthenticatedRegisterRequest;
 import types.responses.AbstractAuthenticatedDoResponse;
 import types.responses.AbstractAuthenticatedRegisterResponse;
 import types.responses.DoOperationOutcome;
+import types.responses.implementation.AuthenticatedDoResponse;
+import types.responses.implementation.AuthenticatedRegisterResponse;
 
 import java.io.IOException;
 import java.io.Serializable;
@@ -65,7 +67,7 @@ public class Phase1ServerImpl<K extends Serializable, V extends Serializable, M 
     server_sign.update(status.name().getBytes());
 
 
-    return new AbstractAuthenticatedRegisterResponse(status, server_sign.sign());
+    return new AuthenticatedRegisterResponse(status, server_sign.sign());
   }
 
   public AbstractAuthenticatedDoResponse<K, V, M> authenticatedDo(AbstractAuthenticatedDoRequest<K, V, M> req) {
@@ -75,6 +77,9 @@ public class Phase1ServerImpl<K extends Serializable, V extends Serializable, M 
     boolean valid = sign.verify(req.digitalSignature);
 
     DoOperationOutcome.Outcome outcome = DoOperationOutcome.Outcome.AUTHENTICATION_FAILURE;
+    K key = req.doOperation.key;
+    V val = req.doOperation.val;
+    M metaVal = req.doOperation.metaVal;;
     if (!valid) {
       outcome = DoOperationOutcome.Outcome.AUTHENTICATION_FAILURE;
     } else {
@@ -89,7 +94,7 @@ public class Phase1ServerImpl<K extends Serializable, V extends Serializable, M 
           break;
         case READVAL:
           try {
-            store.readVal(req.doOperation.key);
+            val = store.readVal(req.doOperation.key);
             outcome = DoOperationOutcome.Outcome.SUCCESS;
           } catch (NoSuchElementException e) {
             outcome = DoOperationOutcome.Outcome.NOSUCHELEMENT;
@@ -105,7 +110,7 @@ public class Phase1ServerImpl<K extends Serializable, V extends Serializable, M 
           break;
         case READMETAVAL:
           try {
-            store.readMetaVal(req.doOperation.key);
+            metaVal = store.readMetaVal(req.doOperation.key);
             outcome = DoOperationOutcome.Outcome.SUCCESS;
           } catch (NoSuchElementException e) {
             outcome = DoOperationOutcome.Outcome.NOSUCHELEMENT;
@@ -121,12 +126,12 @@ public class Phase1ServerImpl<K extends Serializable, V extends Serializable, M 
           break;
       }
     }
-    DoOperationOutcome<K,V,M> doOperationOutcome = new DoOperationOutcome<>(req.doOperation.key, req.doOperation.val, req.doOperation.metaVal, outcome);
+    DoOperationOutcome<K,V,M> doOperationOutcome = new DoOperationOutcome<>(key, val, metaVal, outcome);
 
     Signature server_sign = Signature.getInstance("DSA");
     server_sign.initSign(this.createPrivateKey(this.signingKey));
     server_sign.update(outcome.name().getBytes());
 
-    return new AbstractAuthenticatedDoResponse<K, V, M>(doOperationOutcome, server_sign.sign());
+    return new AuthenticatedDoResponse<K, V, M>(doOperationOutcome, server_sign.sign());
   }
 }
