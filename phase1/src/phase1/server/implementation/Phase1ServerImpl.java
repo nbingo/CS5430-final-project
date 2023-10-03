@@ -1,10 +1,13 @@
 package phase1.server.implementation;
 
+import phase0.implementation.Phase0;
+import phase0.implementation.Phase0Impl;
 import phase1.server.Phase1ServerBase;
 import types.requests.AbstractAuthenticatedDoRequest;
 import types.requests.AbstractAuthenticatedRegisterRequest;
 import types.responses.AbstractAuthenticatedDoResponse;
 import types.responses.AbstractAuthenticatedRegisterResponse;
+import types.responses.DoOperationOutcome;
 
 import java.io.IOException;
 import java.io.Serializable;
@@ -15,18 +18,22 @@ import java.security.Signature;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.X509EncodedKeySpec;
 import java.util.Hashtable;
+import java.util.NoSuchElementException;
 
 public class Phase1ServerImpl<K extends Serializable, V extends Serializable, M extends Serializable> extends Phase1ServerBase<K, V, M> {
 
-  public final byte[] signingKey;
-  public final byte[] verificationKey;
-  public Hashtable<String, byte[]> activeUsers;
+  private final byte[] signingKey;
+  private final byte[] verificationKey;
+  private final Hashtable<String, byte[]> activeUsers;
+
+  private Phase0Impl<K, V, M> store;
 
   public Phase1ServerImpl() throws IOException { 
     super(); 
     this.signingKey = super.signingKey;
     this.verificationKey = super.verificationKey;
     this.activeUsers = new Hashtable<>();
+    this.store = new Phase0Impl<>();
   }
 
   private PrivateKey createPrivateKey(byte[] privateBytes) {
@@ -40,7 +47,7 @@ public class Phase1ServerImpl<K extends Serializable, V extends Serializable, M 
   public AbstractAuthenticatedRegisterResponse authenticatedRegister(AbstractAuthenticatedRegisterRequest req) {
     Signature sign = Signature.getInstance("DSA");
     sign.initVerify(this.createPublicKey(req.verificationKey));
-    sign.update(req.userId.getBytes());
+    sign.update(req.userId.getBytes()); // We shouldn't just be signing the userID – V. vulnerable to replay attacks
     boolean valid = sign.verify(req.digitalSignature);
 
     AbstractAuthenticatedRegisterResponse.Status status;
@@ -63,9 +70,63 @@ public class Phase1ServerImpl<K extends Serializable, V extends Serializable, M 
 
   public AbstractAuthenticatedDoResponse<K, V, M> authenticatedDo(AbstractAuthenticatedDoRequest<K, V, M> req) {
     Signature sign = Signature.getInstance("DSA");
-    sign.initVerify(this.createPublicKey(req.verificationKey)); // CONTINUE FROM HERE
-    sign.update(req.userId.getBytes());
+    sign.initVerify(this.createPublicKey(this.activeUsers.get(req.userId)));
+    sign.update(req.userId.getBytes()); // Figure out what to actually have signed here (userId + operation???)
     boolean valid = sign.verify(req.digitalSignature);
-    return null;
+
+    DoOperationOutcome.Outcome outcome = DoOperationOutcome.Outcome.AUTHENTICATION_FAILURE;
+    if (!valid) {
+      outcome = DoOperationOutcome.Outcome.AUTHENTICATION_FAILURE;
+    } else {
+      switch (req.doOperation.operation) {
+        case CREATE:
+          store.create(req.doOperation.key, req.doOperation.val, req.doOperation.metaVal);
+          outcome = DoOperationOutcome.Outcome.SUCCESS;
+          break;
+        case DELETE:
+          store.delete(req.doOperation.key);
+          outcome = DoOperationOutcome.Outcome.SUCCESS;
+          break;
+        case READVAL:
+          try {
+            store.readVal(req.doOperation.key);
+            outcome = DoOperationOutcome.Outcome.SUCCESS;
+          } catch (NoSuchElementException e) {
+            outcome = DoOperationOutcome.Outcome.NOSUCHELEMENT;
+          }
+          break;
+        case WRITEVAL:
+          try {
+            store.writeVal(req.doOperation.key, req.doOperation.val);
+            outcome = DoOperationOutcome.Outcome.SUCCESS;
+          } catch (IllegalArgumentException e) {
+            outcome = DoOperationOutcome.Outcome.ILLEGALARGUMENT;
+          }
+          break;
+        case READMETAVAL:
+          try {
+            store.readMetaVal(req.doOperation.key);
+            outcome = DoOperationOutcome.Outcome.SUCCESS;
+          } catch (NoSuchElementException e) {
+            outcome = DoOperationOutcome.Outcome.NOSUCHELEMENT;
+          }
+          break;
+        case WRITEMETAVAL:
+          try {
+            store.writeMetaVal(req.doOperation.key, req.doOperation.metaVal);
+            outcome = DoOperationOutcome.Outcome.SUCCESS;
+          } catch (IllegalArgumentException e) {
+            outcome = DoOperationOutcome.Outcome.ILLEGALARGUMENT;
+          }
+          break;
+      }
+    }
+    DoOperationOutcome<K,V,M> doOperationOutcome = new DoOperationOutcome<>(req.doOperation.key, req.doOperation.val, req.doOperation.metaVal, outcome);
+
+    Signature server_sign = Signature.getInstance("DSA");
+    server_sign.initSign(this.createPrivateKey(this.signingKey));
+    server_sign.update(outcome.name().getBytes());
+
+    return new AbstractAuthenticatedDoResponse<K, V, M>(doOperationOutcome, server_sign.sign());
   }
 }
