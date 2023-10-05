@@ -43,15 +43,10 @@ public class Phase1StubImpl<K extends Serializable, V extends Serializable, M ex
   }
 
   private byte[] createSignature(PrivateKey privateKey, byte[] contents) throws NoSuchAlgorithmException, InvalidKeyException, SignatureException {
-    try {
-      Signature server_sign = Signature.getInstance("SHA224withDSA");
-      server_sign.initSign(privateKey);
-      server_sign.update(contents); // For now – add security later
-      return server_sign.sign();
-    } catch (Exception e) {
-      System.out.println("We fucked up in createSignature" + e.toString());
-      return null;
-    }
+    Signature server_sign = Signature.getInstance("SHA224withDSA");
+    server_sign.initSign(privateKey);
+    server_sign.update(contents); // For now – add security later
+    return server_sign.sign();
   }
 
   private boolean verifySignature(PublicKey publicKey, byte[] contents, byte[] signature) throws NoSuchAlgorithmException, InvalidKeyException, SignatureException {
@@ -73,7 +68,6 @@ public class Phase1StubImpl<K extends Serializable, V extends Serializable, M ex
       this.userKeys.put(userId, keyPair);
 
       byte[] signature = this.createSignature(keyPair.getPrivate(), userId.getBytes()); //TODO: Don't just sign userID
-      System.out.println("okay but did we get here? I think no");
 
       AbstractAuthenticatedRegisterRequest req = new AuthenticatedRegisterRequest(userId, keyPair.getPublic().getEncoded(), signature);
 
@@ -81,10 +75,8 @@ public class Phase1StubImpl<K extends Serializable, V extends Serializable, M ex
 
       boolean valid = this.verifySignature(this.createPublicKey(this.serverVerificationKey), response.status.name().getBytes(), response.digitalSignature); //TODO: Contents to verify will change
 
-      System.out.println("Valid: " + valid);
       return valid && response.status == AbstractAuthenticatedRegisterResponse.Status.OK;
     } catch (Exception e) {
-      System.out.println("registerUser went to shit (we're in catch).");
       return false;
     }
   }
@@ -134,14 +126,16 @@ public class Phase1StubImpl<K extends Serializable, V extends Serializable, M ex
 
       boolean valid = this.verifySignature(this.createPublicKey(this.serverVerificationKey), response.outcome.outcome.name().getBytes(), response.digitalSignature);
 
-      if (!valid || response.outcome.outcome == DoOperationOutcome.Outcome.AUTHENTICATION_FAILURE) { // TODO: Okay but like what
-        return null;
-      } else if (response.outcome.outcome == DoOperationOutcome.Outcome.SUCCESS) {
-        return response.outcome.val;
-      } else if (response.outcome.outcome == DoOperationOutcome.Outcome.NOSUCHELEMENT) {
-        throw new NoSuchElementException();
+      if (valid) {
+        if (response.outcome.outcome == DoOperationOutcome.Outcome.SUCCESS) {
+          return response.outcome.val;
+        } else if (response.outcome.outcome == DoOperationOutcome.Outcome.NOSUCHELEMENT) {
+          throw new NoSuchElementException();
+        } else {
+          return null;
+        }
       } else {
-        return null; // We should never get here!
+        return null;
       }
     } catch (Exception e) {
       return null;
@@ -159,14 +153,16 @@ public class Phase1StubImpl<K extends Serializable, V extends Serializable, M ex
 
       boolean valid = this.verifySignature(this.createPublicKey(this.serverVerificationKey), response.outcome.outcome.name().getBytes(), response.digitalSignature);
 
-      if (!valid || response.outcome.outcome == DoOperationOutcome.Outcome.AUTHENTICATION_FAILURE) { // TODO: Okay but like what
-        return null;
-      } else if (response.outcome.outcome == DoOperationOutcome.Outcome.SUCCESS) {
-        return response.outcome.metaVal;
-      } else if (response.outcome.outcome == DoOperationOutcome.Outcome.NOSUCHELEMENT) {
-        throw new NoSuchElementException();
+      if (valid) {
+        if (response.outcome.outcome == DoOperationOutcome.Outcome.SUCCESS) {
+          return response.outcome.metaVal;
+        } else if (response.outcome.outcome == DoOperationOutcome.Outcome.NOSUCHELEMENT) {
+          throw new NoSuchElementException();
+        } else {
+          return null;
+        }
       } else {
-        return null; // We should never get here!
+        return null;
       }
     } catch (Exception e) {
       return null;
@@ -184,14 +180,16 @@ public class Phase1StubImpl<K extends Serializable, V extends Serializable, M ex
 
       boolean valid = this.verifySignature(this.createPublicKey(this.serverVerificationKey), response.outcome.outcome.name().getBytes(), response.digitalSignature);
 
-      if (!valid || response.outcome.outcome == DoOperationOutcome.Outcome.AUTHENTICATION_FAILURE) { // TODO: Okay but like what
-        return false;
-      } else if (response.outcome.outcome == DoOperationOutcome.Outcome.SUCCESS) {
-        return true;
-      } else if (response.outcome.outcome == DoOperationOutcome.Outcome.ILLEGALARGUMENT) {
-        throw new IllegalArgumentException();
+      if (valid) {
+        if (response.outcome.outcome == DoOperationOutcome.Outcome.SUCCESS) {
+          return true;
+        } else if (response.outcome.outcome == DoOperationOutcome.Outcome.ILLEGALARGUMENT) {
+          throw new IllegalArgumentException();
+        } else {
+          return false;
+        }
       } else {
-        return false; // We should never get here!
+        return false;
       }
     } catch (Exception e) {
       return false;
@@ -209,14 +207,16 @@ public class Phase1StubImpl<K extends Serializable, V extends Serializable, M ex
 
       boolean valid = this.verifySignature(this.createPublicKey(this.serverVerificationKey), response.outcome.outcome.name().getBytes(), response.digitalSignature);
 
-      if (!valid || response.outcome.outcome == DoOperationOutcome.Outcome.AUTHENTICATION_FAILURE) { // TODO: Okay but like what
-        return false;
-      } else if (response.outcome.outcome == DoOperationOutcome.Outcome.SUCCESS) {
-        return true;
-      } else if (response.outcome.outcome == DoOperationOutcome.Outcome.ILLEGALARGUMENT) {
-        throw new IllegalArgumentException();
+      if (valid) {
+        if (response.outcome.outcome == DoOperationOutcome.Outcome.SUCCESS) {
+          return true;
+        } else if (response.outcome.outcome == DoOperationOutcome.Outcome.ILLEGALARGUMENT) {
+          throw new IllegalArgumentException();
+        } else {
+          return false;
+        }
       } else {
-        return false; // We should never get here!
+        return false;
       }
     } catch (Exception e) {
       return false;

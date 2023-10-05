@@ -20,6 +20,7 @@ import java.security.spec.X509EncodedKeySpec;
 import java.util.Hashtable;
 import java.util.NoSuchElementException;
 
+// TODO: TO GENERATE UNIQUE VALUES WITH LOW PROBABLITY OF REPEAT USE UUID
 public class Phase1ServerImpl<K extends Serializable, V extends Serializable, M extends Serializable> extends Phase1ServerBase<K, V, M> {
 
   private final byte[] signingKey;
@@ -44,14 +45,26 @@ public class Phase1ServerImpl<K extends Serializable, V extends Serializable, M 
     return KeyFactory.getInstance("DSA").generatePublic(new X509EncodedKeySpec(publicBytes));
   }
 
+  private byte[] createSignature(PrivateKey privateKey, byte[] contents) throws NoSuchAlgorithmException, InvalidKeyException, SignatureException {
+    Signature server_sign = Signature.getInstance("SHA224withDSA");
+    server_sign.initSign(privateKey);
+    server_sign.update(contents); // For now – add security later
+    return server_sign.sign();
+  }
+
+  private boolean verifySignature(PublicKey publicKey, byte[] contents, byte[] signature) throws NoSuchAlgorithmException, InvalidKeyException, SignatureException {
+    Signature sign = Signature.getInstance("SHA224withDSA");
+    sign.initVerify(publicKey);
+    sign.update(contents);
+    return sign.verify(signature);
+  }
+
   public AbstractAuthenticatedRegisterResponse authenticatedRegister(AbstractAuthenticatedRegisterRequest req) {
     try {
-      Signature sign = Signature.getInstance("SHA224withDSA");
-      sign.initVerify(this.createPublicKey(req.verificationKey));
-      sign.update(req.userId.getBytes()); // We shouldn't just be signing the userID – V. vulnerable to replay attacks
-      boolean valid = sign.verify(req.digitalSignature);
+      boolean valid = verifySignature(this.createPublicKey(req.verificationKey), req.userId.getBytes(), req.digitalSignature); // TODO: We shouldn't just be signing the userID – V. vulnerable to replay attacks
 
       AbstractAuthenticatedRegisterResponse.Status status;
+
       if (!valid) {
         status = AbstractAuthenticatedRegisterResponse.Status.AuthenticationFailure;
       } else if (activeUsers.containsKey(req.userId)) {
@@ -60,12 +73,9 @@ public class Phase1ServerImpl<K extends Serializable, V extends Serializable, M 
         activeUsers.put(req.userId, req.verificationKey);
         status = AbstractAuthenticatedRegisterResponse.Status.OK;
       }
-      Signature server_sign = Signature.getInstance("SHA224withDSA");
-      server_sign.initSign(this.createPrivateKey(this.signingKey));
-      server_sign.update(status.name().getBytes());
+      byte[] signature = createSignature(this.createPrivateKey(this.signingKey), status.name().getBytes()); //TODO: Don't just sign status
 
-
-      return new AuthenticatedRegisterResponse(status, server_sign.sign());
+      return new AuthenticatedRegisterResponse(status, signature);
     } catch (Exception e) {
       return null;
     }
@@ -73,19 +83,14 @@ public class Phase1ServerImpl<K extends Serializable, V extends Serializable, M 
 
   public AbstractAuthenticatedDoResponse<K, V, M> authenticatedDo(AbstractAuthenticatedDoRequest<K, V, M> req) {
     try {
-      Signature sign = Signature.getInstance("SHA224withDSA");
-      sign.initVerify(this.createPublicKey(this.activeUsers.get(req.userId)));
-      sign.update(req.userId.getBytes()); // Figure out what to actually have signed here (userId + operation???)
-      boolean valid = sign.verify(req.digitalSignature);
+      boolean valid = verifySignature(this.createPublicKey(this.activeUsers.get(req.userId)), req.userId.getBytes(), req.digitalSignature); // TODO: Figure out what to actually have signed here (userId + operation???)
 
       DoOperationOutcome.Outcome outcome = DoOperationOutcome.Outcome.AUTHENTICATION_FAILURE;
       K key = req.doOperation.key;
       V val = req.doOperation.val;
       M metaVal = req.doOperation.metaVal;
 
-      if (!valid) {
-        outcome = DoOperationOutcome.Outcome.AUTHENTICATION_FAILURE;
-      } else {
+      if (valid) {
         switch (req.doOperation.operation) {
           case CREATE:
             store.create(req.doOperation.key, req.doOperation.val, req.doOperation.metaVal);
@@ -129,13 +134,12 @@ public class Phase1ServerImpl<K extends Serializable, V extends Serializable, M 
             break;
         }
       }
+
       DoOperationOutcome<K, V, M> doOperationOutcome = new DoOperationOutcome<>(key, val, metaVal, outcome);
 
-      Signature server_sign = Signature.getInstance("SHA224withDSA");
-      server_sign.initSign(this.createPrivateKey(this.signingKey));
-      server_sign.update(outcome.name().getBytes());
+      byte[] signature = this.createSignature(this.createPrivateKey(this.signingKey), outcome.name().getBytes()); // TODO: don't just sign the outcome
 
-      return new AuthenticatedDoResponse<K, V, M>(doOperationOutcome, server_sign.sign());
+      return new AuthenticatedDoResponse<K, V, M>(doOperationOutcome, signature);
     } catch (Exception e) {
       return null;
     }
