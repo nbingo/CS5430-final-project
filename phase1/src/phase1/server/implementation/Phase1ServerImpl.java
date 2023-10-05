@@ -46,7 +46,7 @@ public class Phase1ServerImpl<K extends Serializable, V extends Serializable, M 
 
   public AbstractAuthenticatedRegisterResponse authenticatedRegister(AbstractAuthenticatedRegisterRequest req) {
     try {
-      Signature sign = Signature.getInstance("DSA");
+      Signature sign = Signature.getInstance("SHA224withDSA");
       sign.initVerify(this.createPublicKey(req.verificationKey));
       sign.update(req.userId.getBytes()); // We shouldn't just be signing the userID – V. vulnerable to replay attacks
       boolean valid = sign.verify(req.digitalSignature);
@@ -60,7 +60,7 @@ public class Phase1ServerImpl<K extends Serializable, V extends Serializable, M 
         activeUsers.put(req.userId, req.verificationKey);
         status = AbstractAuthenticatedRegisterResponse.Status.OK;
       }
-      Signature server_sign = Signature.getInstance("DSA");
+      Signature server_sign = Signature.getInstance("SHA224withDSA");
       server_sign.initSign(this.createPrivateKey(this.signingKey));
       server_sign.update(status.name().getBytes());
 
@@ -73,7 +73,7 @@ public class Phase1ServerImpl<K extends Serializable, V extends Serializable, M 
 
   public AbstractAuthenticatedDoResponse<K, V, M> authenticatedDo(AbstractAuthenticatedDoRequest<K, V, M> req) {
     try {
-      Signature sign = Signature.getInstance("DSA");
+      Signature sign = Signature.getInstance("SHA224withDSA");
       sign.initVerify(this.createPublicKey(this.activeUsers.get(req.userId)));
       sign.update(req.userId.getBytes()); // Figure out what to actually have signed here (userId + operation???)
       boolean valid = sign.verify(req.digitalSignature);
@@ -82,7 +82,7 @@ public class Phase1ServerImpl<K extends Serializable, V extends Serializable, M 
       K key = req.doOperation.key;
       V val = req.doOperation.val;
       M metaVal = req.doOperation.metaVal;
-      ;
+
       if (!valid) {
         outcome = DoOperationOutcome.Outcome.AUTHENTICATION_FAILURE;
       } else {
@@ -131,7 +131,7 @@ public class Phase1ServerImpl<K extends Serializable, V extends Serializable, M 
       }
       DoOperationOutcome<K, V, M> doOperationOutcome = new DoOperationOutcome<>(key, val, metaVal, outcome);
 
-      Signature server_sign = Signature.getInstance("DSA");
+      Signature server_sign = Signature.getInstance("SHA224withDSA");
       server_sign.initSign(this.createPrivateKey(this.signingKey));
       server_sign.update(outcome.name().getBytes());
 

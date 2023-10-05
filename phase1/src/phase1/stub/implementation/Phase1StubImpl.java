@@ -44,7 +44,7 @@ public class Phase1StubImpl<K extends Serializable, V extends Serializable, M ex
 
   private byte[] createSignature(PrivateKey privateKey, byte[] contents) throws NoSuchAlgorithmException, InvalidKeyException, SignatureException {
     try {
-      Signature server_sign = Signature.getInstance("DSA");
+      Signature server_sign = Signature.getInstance("SHA224withDSA");
       server_sign.initSign(privateKey);
       server_sign.update(contents); // For now – add security later
       return server_sign.sign();
@@ -55,7 +55,7 @@ public class Phase1StubImpl<K extends Serializable, V extends Serializable, M ex
   }
 
   private boolean verifySignature(PublicKey publicKey, byte[] contents, byte[] signature) throws NoSuchAlgorithmException, InvalidKeyException, SignatureException {
-    Signature sign = Signature.getInstance("DSA");
+    Signature sign = Signature.getInstance("SHA224withDSA");
     sign.initVerify(publicKey);
     sign.update(contents);
     return sign.verify(signature);
