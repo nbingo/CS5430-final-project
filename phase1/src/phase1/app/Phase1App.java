@@ -86,6 +86,22 @@ public class Phase1App {
     // Get this test to pass first
     sampleTestRegister(stub, userId);
 
+    System.out.println("Custom tests:");
+    sampleTestRegister(stub, "Rebecca");
+    try {
+      stub.create("Rebecca", "banana", "cat", "dog");
+      System.out.println(stub.readVal("Rebecca", "banana"));
+      System.out.println(stub.readVal("fbs", "banana"));
+      System.out.println(stub.writeMetaVal("Rebecca", "banana", "cheese"));
+      System.out.println(stub.readMetaVal("Rebecca", "banana"));
+      System.out.println(stub.writeVal("Rebecca", "banana", "cheese"));
+      System.out.println(stub.readVal("Rebecca", "banana"));
+      stub.create("Rebecca", "fruit", "cat", "dog");
+      stub.create("Rebecca", "banana", "cat", "dog"); //TODO: Can we add the same key twice?
+    } catch (Exception e) {
+      System.out.println(e);
+    }
+
     System.exit(0);
   }
 
@@ -97,7 +113,7 @@ public class Phase1App {
     } catch (RemoteException e) {
       System.out.println("Test sampleTestRegister failed due to RemoteException.");
     } catch (AssertionError e) {
-      System.out.println("Test sampleTestRegister failed.");
+      System.out.println("Test sampleTestRegister failed registering " + userId + ". With message: " + e);
       System.exit(5);
     }
   }

@@ -27,7 +27,7 @@ public class Phase1ServerImpl<K extends Serializable, V extends Serializable, M 
   private final byte[] verificationKey;
   private final Hashtable<String, byte[]> activeUsers;
 
-  private Phase0Impl<K, V, M> store;
+  private Phase0Impl<K, V, M> store; //TODO: Should have a hash table of user IDs to stores :(
 
   public Phase1ServerImpl() throws IOException {
     super();
