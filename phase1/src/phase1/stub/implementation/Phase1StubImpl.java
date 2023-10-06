@@ -1,5 +1,6 @@
 package phase1.stub.implementation;
 
+import org.jetbrains.annotations.NotNull;
 import phase1.stub.Phase1StubBase;
 import types.requests.AbstractAuthenticatedDoRequest;
 import types.requests.AbstractAuthenticatedRegisterRequest;
@@ -62,6 +63,33 @@ public class Phase1StubImpl<K extends Serializable, V extends Serializable, M ex
     return keyPairGenerator.generateKeyPair();
   }
 
+  private Boolean getValid(AbstractAuthenticatedDoResponse<K, V, M> response) throws NoSuchAlgorithmException, InvalidKeySpecException, SignatureException, InvalidKeyException {
+    return this.verifySignature(this.createPublicKey(this.serverVerificationKey), response.outcome.outcome.name().getBytes(), response.digitalSignature);
+  }
+
+  private AbstractAuthenticatedDoResponse<K, V, M> requestAndGetResponse(String userId, DoOperation<K, V, M> doOperation) throws NoSuchAlgorithmException, InvalidKeyException, SignatureException, RemoteException {
+    byte[] signature = this.createSignature(userKeys.get(userId).getPrivate(), userId.getBytes()); //TODO: Don't just sign userId
+
+    AbstractAuthenticatedDoRequest<K, V, M> req = new AuthenticatedDoRequest<>(userId, doOperation, signature);
+
+    return this.network.handleAuthenticatedDo(req);
+    //    return valid && response.outcome.outcome == DoOperationOutcome.Outcome.SUCCESS;
+  }
+
+  private Boolean returnWriteSuccess(AbstractAuthenticatedDoResponse<K, V, M> response, boolean valid) {
+    if (valid) {
+      if (response.outcome.outcome == DoOperationOutcome.Outcome.SUCCESS) {
+        return true;
+      } else if (response.outcome.outcome == DoOperationOutcome.Outcome.ILLEGALARGUMENT) {
+        throw new IllegalArgumentException();
+      } else {
+        return false;
+      }
+    } else {
+      return false;
+    }
+  }
+
   public Boolean registerUser(String userId) throws RemoteException {
     try {
       KeyPair keyPair = this.createKeyPair();
@@ -84,15 +112,10 @@ public class Phase1StubImpl<K extends Serializable, V extends Serializable, M ex
   public Boolean create(String userId, K key, V val, M metaVal) throws RemoteException {
     try {
       DoOperation<K, V, M> doOperation = new DoOperation<>(key, val, metaVal, DoOperation.Operation.CREATE);
-      byte[] signature = this.createSignature(userKeys.get(userId).getPrivate(), userId.getBytes()); //TODO: Don't just sign userId
 
-      AbstractAuthenticatedDoRequest<K, V, M> req = new AuthenticatedDoRequest<>(userId, doOperation, signature);
+      AbstractAuthenticatedDoResponse<K, V, M> response =  requestAndGetResponse(userId, doOperation);
 
-      AbstractAuthenticatedDoResponse<K, V, M> response = this.network.handleAuthenticatedDo(req);
-
-      boolean valid = this.verifySignature(this.createPublicKey(this.serverVerificationKey), response.outcome.outcome.name().getBytes(), response.digitalSignature);
-
-      return valid && response.outcome.outcome == DoOperationOutcome.Outcome.SUCCESS;
+      return getValid(response) && response.outcome.outcome == DoOperationOutcome.Outcome.SUCCESS;
     } catch (Exception e) {
       return false;
     }
@@ -101,15 +124,10 @@ public class Phase1StubImpl<K extends Serializable, V extends Serializable, M ex
   public Boolean delete(String userId, K key) throws RemoteException {
     try {
       DoOperation<K, V, M> doOperation = new DoOperation<>(key, null, null, DoOperation.Operation.DELETE); // TODO: Make these null?
-      byte[] signature = this.createSignature(userKeys.get(userId).getPrivate(), userId.getBytes()); //TODO: Don't just sign userId
 
-      AbstractAuthenticatedDoRequest<K, V, M> req = new AuthenticatedDoRequest<>(userId, doOperation, signature);
+      AbstractAuthenticatedDoResponse<K, V, M> response =  requestAndGetResponse(userId, doOperation);
 
-      AbstractAuthenticatedDoResponse<K, V, M> response = this.network.handleAuthenticatedDo(req);
-
-      boolean valid = this.verifySignature(this.createPublicKey(this.serverVerificationKey), response.outcome.outcome.name().getBytes(), response.digitalSignature);
-
-      return valid && response.outcome.outcome == DoOperationOutcome.Outcome.SUCCESS;
+      return getValid(response) && response.outcome.outcome == DoOperationOutcome.Outcome.SUCCESS;
     } catch (Exception e) {
       return false;
     }
@@ -118,13 +136,10 @@ public class Phase1StubImpl<K extends Serializable, V extends Serializable, M ex
   public V readVal(String userId, K key) throws RemoteException, NoSuchElementException {
     try {
       DoOperation<K, V, M> doOperation = new DoOperation<>(key, null, null, DoOperation.Operation.READVAL); // TODO: Make these null?
-      byte[] signature = this.createSignature(userKeys.get(userId).getPrivate(), userId.getBytes()); //TODO: Don't just sign userId
 
-      AbstractAuthenticatedDoRequest<K, V, M> req = new AuthenticatedDoRequest<>(userId, doOperation, signature);
+      AbstractAuthenticatedDoResponse<K, V, M> response =  requestAndGetResponse(userId, doOperation);
 
-      AbstractAuthenticatedDoResponse<K, V, M> response = this.network.handleAuthenticatedDo(req);
-
-      boolean valid = this.verifySignature(this.createPublicKey(this.serverVerificationKey), response.outcome.outcome.name().getBytes(), response.digitalSignature);
+      boolean valid = getValid(response);
 
       if (valid) {
         if (response.outcome.outcome == DoOperationOutcome.Outcome.SUCCESS) {
@@ -145,13 +160,10 @@ public class Phase1StubImpl<K extends Serializable, V extends Serializable, M ex
   public M readMetaVal(String userId, K key) throws RemoteException, NoSuchElementException {
     try {
       DoOperation<K, V, M> doOperation = new DoOperation<>(key, null, null, DoOperation.Operation.READMETAVAL); // TODO: Make these null?
-      byte[] signature = this.createSignature(userKeys.get(userId).getPrivate(), userId.getBytes()); //TODO: Don't just sign userId
 
-      AbstractAuthenticatedDoRequest<K, V, M> req = new AuthenticatedDoRequest<>(userId, doOperation, signature);
+      AbstractAuthenticatedDoResponse<K, V, M> response =  requestAndGetResponse(userId, doOperation);
 
-      AbstractAuthenticatedDoResponse<K, V, M> response = this.network.handleAuthenticatedDo(req);
-
-      boolean valid = this.verifySignature(this.createPublicKey(this.serverVerificationKey), response.outcome.outcome.name().getBytes(), response.digitalSignature);
+      boolean valid = getValid(response);
 
       if (valid) {
         if (response.outcome.outcome == DoOperationOutcome.Outcome.SUCCESS) {
@@ -172,25 +184,11 @@ public class Phase1StubImpl<K extends Serializable, V extends Serializable, M ex
   public Boolean writeVal(String userId, K key, V newVal) throws RemoteException, IllegalArgumentException {
     try {
       DoOperation<K, V, M> doOperation = new DoOperation<>(key, newVal, null, DoOperation.Operation.WRITEVAL); // TODO: Make these null?
-      byte[] signature = this.createSignature(userKeys.get(userId).getPrivate(), userId.getBytes()); //TODO: Don't just sign userId
 
-      AbstractAuthenticatedDoRequest<K, V, M> req = new AuthenticatedDoRequest<>(userId, doOperation, signature);
+      AbstractAuthenticatedDoResponse<K, V, M> response =  requestAndGetResponse(userId, doOperation);
 
-      AbstractAuthenticatedDoResponse<K, V, M> response = this.network.handleAuthenticatedDo(req);
+      return returnWriteSuccess(response, getValid(response));
 
-      boolean valid = this.verifySignature(this.createPublicKey(this.serverVerificationKey), response.outcome.outcome.name().getBytes(), response.digitalSignature);
-
-      if (valid) {
-        if (response.outcome.outcome == DoOperationOutcome.Outcome.SUCCESS) {
-          return true;
-        } else if (response.outcome.outcome == DoOperationOutcome.Outcome.ILLEGALARGUMENT) {
-          throw new IllegalArgumentException();
-        } else {
-          return false;
-        }
-      } else {
-        return false;
-      }
     } catch (Exception e) {
       return false;
     }
@@ -199,25 +197,10 @@ public class Phase1StubImpl<K extends Serializable, V extends Serializable, M ex
   public Boolean writeMetaVal(String userId, K key, M newMetaVal) throws RemoteException, IllegalArgumentException {
     try {
       DoOperation<K, V, M> doOperation = new DoOperation<>(key, null, newMetaVal, DoOperation.Operation.WRITEMETAVAL); // TODO: Make these null?
-      byte[] signature = this.createSignature(userKeys.get(userId).getPrivate(), userId.getBytes()); //TODO: Don't just sign userId
 
-      AbstractAuthenticatedDoRequest<K, V, M> req = new AuthenticatedDoRequest<>(userId, doOperation, signature);
+      AbstractAuthenticatedDoResponse<K, V, M> response =  requestAndGetResponse(userId, doOperation);
 
-      AbstractAuthenticatedDoResponse<K, V, M> response = this.network.handleAuthenticatedDo(req);
-
-      boolean valid = this.verifySignature(this.createPublicKey(this.serverVerificationKey), response.outcome.outcome.name().getBytes(), response.digitalSignature);
-
-      if (valid) {
-        if (response.outcome.outcome == DoOperationOutcome.Outcome.SUCCESS) {
-          return true;
-        } else if (response.outcome.outcome == DoOperationOutcome.Outcome.ILLEGALARGUMENT) {
-          throw new IllegalArgumentException();
-        } else {
-          return false;
-        }
-      } else {
-        return false;
-      }
+      return returnWriteSuccess(response, getValid(response));
     } catch (Exception e) {
       return false;
     }
