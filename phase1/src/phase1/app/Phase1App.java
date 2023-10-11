@@ -88,8 +88,10 @@ public class Phase1App {
 
     System.out.println("Custom tests:");
     sampleTestRegister(stub, "Rebecca");
+    // ALL TESTS FROM HERE ON FAILING
+    // TODO: possible failure is name() vs. toString() when encoding enums
     try {
-      stub.create("Rebecca", "banana", "cat", "dog");
+      System.out.println(stub.create("Rebecca", "banana", "cat", "dog"));
       System.out.println(stub.readVal("Rebecca", "banana"));
       System.out.println(stub.readVal("fbs", "banana"));
       System.out.println(stub.writeMetaVal("Rebecca", "banana", "cheese"));

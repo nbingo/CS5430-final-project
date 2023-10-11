@@ -11,8 +11,11 @@ import types.responses.DoOperationOutcome;
 import types.responses.implementation.AuthenticatedDoResponse;
 import types.responses.implementation.AuthenticatedRegisterResponse;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.ObjectOutputStream;
 import java.io.Serializable;
+import java.nio.ByteBuffer;
 import java.security.*;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.PKCS8EncodedKeySpec;
@@ -59,18 +62,29 @@ public class Phase1ServerImpl<K extends Serializable, V extends Serializable, M 
     return sign.verify(signature);
   }
 
+  private String extractId(String idNonce) {
+    return idNonce.substring(idNonce.length()-36);
+  }
+
   public AbstractAuthenticatedRegisterResponse authenticatedRegister(AbstractAuthenticatedRegisterRequest req) {
     try {
-      boolean valid = verifySignature(this.createPublicKey(req.verificationKey), req.userId.getBytes(), req.digitalSignature); // TODO: We shouldn't just be signing the userID – V. vulnerable to replay attacks
+      String extractedId = this.extractId(req.userId);
+
+      byte[] combined = new byte[req.userId.getBytes().length + req.verificationKey.length];
+      ByteBuffer buffer = ByteBuffer.wrap(combined);
+      buffer.put(req.userId.getBytes());
+      buffer.put(req.verificationKey);
+
+      boolean valid = verifySignature(this.createPublicKey(req.verificationKey), buffer.array(), req.digitalSignature); // TODO: We shouldn't just be signing the userID – V. vulnerable to replay attacks
 
       AbstractAuthenticatedRegisterResponse.Status status;
 
       if (!valid) {
         status = AbstractAuthenticatedRegisterResponse.Status.AuthenticationFailure;
-      } else if (activeUsers.containsKey(req.userId)) {
+      } else if (activeUsers.containsKey(extractedId)) {
         status = AbstractAuthenticatedRegisterResponse.Status.UserAlreadyExists;
       } else {
-        activeUsers.put(req.userId, req.verificationKey);
+        activeUsers.put(extractedId, req.verificationKey);
         status = AbstractAuthenticatedRegisterResponse.Status.OK;
       }
       byte[] signature = createSignature(this.createPrivateKey(this.signingKey), status.name().getBytes()); //TODO: Don't just sign status
@@ -83,12 +97,28 @@ public class Phase1ServerImpl<K extends Serializable, V extends Serializable, M 
 
   public AbstractAuthenticatedDoResponse<K, V, M> authenticatedDo(AbstractAuthenticatedDoRequest<K, V, M> req) {
     try {
-      boolean valid = verifySignature(this.createPublicKey(this.activeUsers.get(req.userId)), req.userId.getBytes(), req.digitalSignature); // TODO: Figure out what to actually have signed here (userId + operation???)
-
-      DoOperationOutcome.Outcome outcome = DoOperationOutcome.Outcome.AUTHENTICATION_FAILURE;
       K key = req.doOperation.key;
       V val = req.doOperation.val;
       M metaVal = req.doOperation.metaVal;
+
+      byte[] idNonceEnum = (req.userId + req.doOperation).getBytes();
+
+      ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
+      ObjectOutputStream stream = new ObjectOutputStream(byteStream);
+      stream.writeObject(key);
+      stream.writeObject(val);
+      stream.writeObject(metaVal);
+      stream.flush();
+      byte[] keyValMetaVal = byteStream.toByteArray();
+
+      byte[] combined = new byte[idNonceEnum.length + keyValMetaVal.length];
+      ByteBuffer buffer = ByteBuffer.wrap(combined);
+      buffer.put(idNonceEnum);
+      buffer.put(keyValMetaVal);
+
+      boolean valid = verifySignature(this.createPublicKey(this.activeUsers.get(this.extractId(req.userId))), buffer.array(), req.digitalSignature); // TODO: Figure out what to actually have signed here (userId + operation???)
+
+      DoOperationOutcome.Outcome outcome = DoOperationOutcome.Outcome.AUTHENTICATION_FAILURE;
 
       if (valid) {
         switch (req.doOperation.operation) {

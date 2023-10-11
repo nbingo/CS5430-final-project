@@ -119,17 +119,25 @@ public class Phase1StubImpl<K extends Serializable, V extends Serializable, M ex
     try {
       KeyPair keyPair = this.createKeyPair();
       this.userKeys.put(userId, keyPair);
+//      System.out.println("just did keys!");
 
       String idNonce = this.addNonce(userId); // TODO: Think more carefully about what to sign
       byte[] combined = createToSign(idNonce.getBytes(), keyPair.getPublic().getEncoded());
+//      System.out.println("oooh we're encoded");
 
       byte[] signature = this.createSignature(keyPair.getPrivate(), combined); //TODO: Don't just sign userID
+//      System.out.println("and signed!");
 
-      AbstractAuthenticatedRegisterRequest req = new AuthenticatedRegisterRequest(userId, keyPair.getPublic().getEncoded(), signature);
+      AbstractAuthenticatedRegisterRequest req = new AuthenticatedRegisterRequest(idNonce, keyPair.getPublic().getEncoded(), signature);
+//      System.out.println("request!");
 
       AbstractAuthenticatedRegisterResponse response = this.network.handleAuthenticatedRegister(req);
+//      System.out.println("response!");
 
+//      System.out.println(response);
       boolean valid = this.verifySignature(this.createPublicKey(this.serverVerificationKey), response.status.name().getBytes(), response.digitalSignature); //TODO: Contents to verify will change
+//      System.out.println("veeeeeeerified");
+//      System.out.println(valid);
 
       return valid && response.status == AbstractAuthenticatedRegisterResponse.Status.OK;
     } catch (Exception e) {
