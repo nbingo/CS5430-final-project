@@ -1,6 +1,5 @@
 package phase1.stub.implementation;
 
-import org.jetbrains.annotations.NotNull;
 import phase1.stub.Phase1StubBase;
 import types.requests.AbstractAuthenticatedDoRequest;
 import types.requests.AbstractAuthenticatedRegisterRequest;
@@ -11,8 +10,11 @@ import types.responses.AbstractAuthenticatedDoResponse;
 import types.responses.AbstractAuthenticatedRegisterResponse;
 import types.responses.DoOperationOutcome;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.ObjectOutputStream;
 import java.io.Serializable;
+import java.nio.ByteBuffer;
 import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.security.*;
@@ -21,6 +23,7 @@ import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.X509EncodedKeySpec;
 import java.util.Hashtable;
 import java.util.NoSuchElementException;
+import java.util.UUID;
 
 public class Phase1StubImpl<K extends Serializable, V extends Serializable, M extends Serializable> extends Phase1StubBase<K, V, M> {
 
@@ -67,13 +70,27 @@ public class Phase1StubImpl<K extends Serializable, V extends Serializable, M ex
     return this.verifySignature(this.createPublicKey(this.serverVerificationKey), response.outcome.outcome.name().getBytes(), response.digitalSignature);
   }
 
-  private AbstractAuthenticatedDoResponse<K, V, M> requestAndGetResponse(String userId, DoOperation<K, V, M> doOperation) throws NoSuchAlgorithmException, InvalidKeyException, SignatureException, RemoteException {
-    byte[] signature = this.createSignature(userKeys.get(userId).getPrivate(), userId.getBytes()); //TODO: Don't just sign userId
+  private AbstractAuthenticatedDoResponse<K, V, M> requestAndGetResponse(String userId, DoOperation<K, V, M> doOperation, String mode) throws NoSuchAlgorithmException, InvalidKeyException, SignatureException, IOException {
+    String idNonce = this.addNonce(userId);
 
-    AbstractAuthenticatedDoRequest<K, V, M> req = new AuthenticatedDoRequest<>(userId, doOperation, signature);
+    ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
+    ObjectOutputStream stream = new ObjectOutputStream(byteStream);
+    stream.writeObject(doOperation.key);
+    stream.writeObject(doOperation.val);
+    stream.writeObject(doOperation.metaVal);
+    stream.flush();
+
+    byte[] combined = createToSign((idNonce + mode).getBytes(), byteStream.toByteArray());
+
+    byte[] signature = this.createSignature(userKeys.get(userId).getPrivate(), combined); //TODO: Don't just sign userId
+
+    AbstractAuthenticatedDoRequest<K, V, M> req = new AuthenticatedDoRequest<>(idNonce, doOperation, signature);
 
     return this.network.handleAuthenticatedDo(req);
-    //    return valid && response.outcome.outcome == DoOperationOutcome.Outcome.SUCCESS;
+  }
+
+  private String addNonce(String userId) {
+    return userId + UUID.randomUUID();
   }
 
   private Boolean returnWriteSuccess(AbstractAuthenticatedDoResponse<K, V, M> response, boolean valid) {
@@ -90,12 +107,23 @@ public class Phase1StubImpl<K extends Serializable, V extends Serializable, M ex
     }
   }
 
+  private byte[] createToSign(byte[] idNonce, byte[] functionSpec) {
+    byte[] combined = new byte[idNonce.length + functionSpec.length];
+    ByteBuffer buffer = ByteBuffer.wrap(combined);
+    buffer.put(idNonce);
+    buffer.put(functionSpec);
+    return buffer.array();
+  }
+
   public Boolean registerUser(String userId) throws RemoteException {
     try {
       KeyPair keyPair = this.createKeyPair();
       this.userKeys.put(userId, keyPair);
 
-      byte[] signature = this.createSignature(keyPair.getPrivate(), userId.getBytes()); //TODO: Don't just sign userID
+      String idNonce = this.addNonce(userId); // TODO: Think more carefully about what to sign
+      byte[] combined = createToSign(idNonce.getBytes(), keyPair.getPublic().getEncoded());
+
+      byte[] signature = this.createSignature(keyPair.getPrivate(), combined); //TODO: Don't just sign userID
 
       AbstractAuthenticatedRegisterRequest req = new AuthenticatedRegisterRequest(userId, keyPair.getPublic().getEncoded(), signature);
 
@@ -113,7 +141,7 @@ public class Phase1StubImpl<K extends Serializable, V extends Serializable, M ex
     try {
       DoOperation<K, V, M> doOperation = new DoOperation<>(key, val, metaVal, DoOperation.Operation.CREATE);
 
-      AbstractAuthenticatedDoResponse<K, V, M> response =  requestAndGetResponse(userId, doOperation);
+      AbstractAuthenticatedDoResponse<K, V, M> response =  requestAndGetResponse(userId, doOperation, DoOperation.Operation.CREATE.toString());
 
       return getValid(response) && response.outcome.outcome == DoOperationOutcome.Outcome.SUCCESS;
     } catch (Exception e) {
@@ -125,7 +153,7 @@ public class Phase1StubImpl<K extends Serializable, V extends Serializable, M ex
     try {
       DoOperation<K, V, M> doOperation = new DoOperation<>(key, null, null, DoOperation.Operation.DELETE); // TODO: Make these null?
 
-      AbstractAuthenticatedDoResponse<K, V, M> response =  requestAndGetResponse(userId, doOperation);
+      AbstractAuthenticatedDoResponse<K, V, M> response =  requestAndGetResponse(userId, doOperation, DoOperation.Operation.DELETE.toString());
 
       return getValid(response) && response.outcome.outcome == DoOperationOutcome.Outcome.SUCCESS;
     } catch (Exception e) {
@@ -137,7 +165,7 @@ public class Phase1StubImpl<K extends Serializable, V extends Serializable, M ex
     try {
       DoOperation<K, V, M> doOperation = new DoOperation<>(key, null, null, DoOperation.Operation.READVAL); // TODO: Make these null?
 
-      AbstractAuthenticatedDoResponse<K, V, M> response =  requestAndGetResponse(userId, doOperation);
+      AbstractAuthenticatedDoResponse<K, V, M> response =  requestAndGetResponse(userId, doOperation, DoOperation.Operation.READVAL.toString());
 
       boolean valid = getValid(response);
 
@@ -161,7 +189,7 @@ public class Phase1StubImpl<K extends Serializable, V extends Serializable, M ex
     try {
       DoOperation<K, V, M> doOperation = new DoOperation<>(key, null, null, DoOperation.Operation.READMETAVAL); // TODO: Make these null?
 
-      AbstractAuthenticatedDoResponse<K, V, M> response =  requestAndGetResponse(userId, doOperation);
+      AbstractAuthenticatedDoResponse<K, V, M> response =  requestAndGetResponse(userId, doOperation, DoOperation.Operation.READMETAVAL.toString());
 
       boolean valid = getValid(response);
 
@@ -185,7 +213,7 @@ public class Phase1StubImpl<K extends Serializable, V extends Serializable, M ex
     try {
       DoOperation<K, V, M> doOperation = new DoOperation<>(key, newVal, null, DoOperation.Operation.WRITEVAL); // TODO: Make these null?
 
-      AbstractAuthenticatedDoResponse<K, V, M> response =  requestAndGetResponse(userId, doOperation);
+      AbstractAuthenticatedDoResponse<K, V, M> response =  requestAndGetResponse(userId, doOperation, DoOperation.Operation.WRITEVAL.toString());
 
       return returnWriteSuccess(response, getValid(response));
 
@@ -198,7 +226,7 @@ public class Phase1StubImpl<K extends Serializable, V extends Serializable, M ex
     try {
       DoOperation<K, V, M> doOperation = new DoOperation<>(key, null, newMetaVal, DoOperation.Operation.WRITEMETAVAL); // TODO: Make these null?
 
-      AbstractAuthenticatedDoResponse<K, V, M> response =  requestAndGetResponse(userId, doOperation);
+      AbstractAuthenticatedDoResponse<K, V, M> response =  requestAndGetResponse(userId, doOperation, DoOperation.Operation.WRITEMETAVAL.toString());
 
       return returnWriteSuccess(response, getValid(response));
     } catch (Exception e) {

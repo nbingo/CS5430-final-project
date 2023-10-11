@@ -96,7 +96,7 @@ public class Phase1App {
       System.out.println(stub.readMetaVal("Rebecca", "banana"));
       System.out.println(stub.writeVal("Rebecca", "banana", "cheese"));
       System.out.println(stub.readVal("Rebecca", "banana"));
-      stub.create("Rebecca", "fruit", "cat", "dog");
+      stub.create("Rebecca", "apple", "cat", "dog");
       stub.create("Rebecca", "banana", "cat", "dog"); //TODO: Can we add the same key twice?
     } catch (Exception e) {
       System.out.println(e);
