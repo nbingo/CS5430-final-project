@@ -63,7 +63,7 @@ public class Phase1ServerImpl<K extends Serializable, V extends Serializable, M 
   }
 
   private String extractId(String idNonce) {
-    return idNonce.substring(idNonce.length()-36);
+    return idNonce.substring(0, idNonce.length()-36);
   }
 
   public AbstractAuthenticatedRegisterResponse authenticatedRegister(AbstractAuthenticatedRegisterRequest req) {
@@ -101,7 +101,7 @@ public class Phase1ServerImpl<K extends Serializable, V extends Serializable, M 
       V val = req.doOperation.val;
       M metaVal = req.doOperation.metaVal;
 
-      byte[] idNonceEnum = (req.userId + req.doOperation).getBytes();
+      byte[] idNonceEnum = (req.userId + req.doOperation.operation.name()).getBytes();
 
       ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
       ObjectOutputStream stream = new ObjectOutputStream(byteStream);
@@ -117,7 +117,6 @@ public class Phase1ServerImpl<K extends Serializable, V extends Serializable, M 
       buffer.put(keyValMetaVal);
 
       boolean valid = verifySignature(this.createPublicKey(this.activeUsers.get(this.extractId(req.userId))), buffer.array(), req.digitalSignature); // TODO: Figure out what to actually have signed here (userId + operation???)
-
       DoOperationOutcome.Outcome outcome = DoOperationOutcome.Outcome.AUTHENTICATION_FAILURE;
 
       if (valid) {
