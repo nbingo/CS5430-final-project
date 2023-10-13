@@ -147,7 +147,12 @@ public class Phase1StubImpl<K extends Serializable, V extends Serializable, M ex
 
       AbstractAuthenticatedRegisterResponse response = this.network.handleAuthenticatedRegister(req);
 
-      boolean valid = this.verifySignature(this.createPublicKey(this.serverVerificationKey), response.status.name().getBytes(), response.digitalSignature); //TODO: Contents to verify will change
+      byte[] return_combined = new byte[idNonce.getBytes().length + response.status.name().getBytes().length];
+      ByteBuffer return_buffer = ByteBuffer.wrap(return_combined);
+      return_buffer.put(idNonce.getBytes());
+      return_buffer.put(response.status.name().getBytes());
+
+      boolean valid = this.verifySignature(this.createPublicKey(this.serverVerificationKey), return_buffer.array(), response.digitalSignature); //TODO: Contents to verify will change
 
       return valid && response.status == AbstractAuthenticatedRegisterResponse.Status.OK;
     } catch (Exception e) {
