@@ -65,6 +65,17 @@ public class Phase1ServerImpl<K extends Serializable, V extends Serializable, M 
   private String extractId(String idNonce) {
     return idNonce.substring(0, idNonce.length()-36);
   }
+  private byte[] convertKVMtoByte(K key, V val, M metaVal) throws IOException {
+    ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
+    ObjectOutputStream stream = new ObjectOutputStream(byteStream);
+    stream.writeObject(key);
+    stream.writeObject(val);
+    stream.writeObject(metaVal);
+    stream.flush();
+
+    return byteStream.toByteArray();
+  }
+
 
   public AbstractAuthenticatedRegisterResponse authenticatedRegister(AbstractAuthenticatedRegisterRequest req) {
     try {
@@ -87,7 +98,13 @@ public class Phase1ServerImpl<K extends Serializable, V extends Serializable, M 
         activeUsers.put(extractedId, req.verificationKey);
         status = AbstractAuthenticatedRegisterResponse.Status.OK;
       }
-      byte[] signature = createSignature(this.createPrivateKey(this.signingKey), status.name().getBytes()); //TODO: Don't just sign status
+
+      byte[] return_combined = new byte[req.userId.getBytes().length + status.name().getBytes().length];
+      ByteBuffer return_buffer = ByteBuffer.wrap(return_combined);
+      return_buffer.put(req.userId.getBytes());
+      return_buffer.put(status.name().getBytes());
+
+      byte[] signature = createSignature(this.createPrivateKey(this.signingKey), return_buffer.array()); //TODO: Don't just sign status
 
       return new AuthenticatedRegisterResponse(status, signature);
     } catch (Exception e) {
@@ -103,13 +120,7 @@ public class Phase1ServerImpl<K extends Serializable, V extends Serializable, M 
 
       byte[] idNonceEnum = (req.userId + req.doOperation.operation.name()).getBytes();
 
-      ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
-      ObjectOutputStream stream = new ObjectOutputStream(byteStream);
-      stream.writeObject(key);
-      stream.writeObject(val);
-      stream.writeObject(metaVal);
-      stream.flush();
-      byte[] keyValMetaVal = byteStream.toByteArray();
+      byte[] keyValMetaVal = convertKVMtoByte(key, val, metaVal);
 
       byte[] combined = new byte[idNonceEnum.length + keyValMetaVal.length];
       ByteBuffer buffer = ByteBuffer.wrap(combined);
@@ -163,10 +174,17 @@ public class Phase1ServerImpl<K extends Serializable, V extends Serializable, M 
             break;
         }
       }
-
       DoOperationOutcome<K, V, M> doOperationOutcome = new DoOperationOutcome<>(key, val, metaVal, outcome);
 
-      byte[] signature = this.createSignature(this.createPrivateKey(this.signingKey), outcome.name().getBytes()); // TODO: don't just sign the outcome
+      byte[] newKeyValMetaVal = convertKVMtoByte(key, val, metaVal);
+
+      byte[] new_combined = new byte[req.userId.getBytes().length + newKeyValMetaVal.length + outcome.name().getBytes().length];
+      ByteBuffer new_buffer = ByteBuffer.wrap(new_combined);
+      new_buffer.put(req.userId.getBytes());
+      new_buffer.put(newKeyValMetaVal);
+      new_buffer.put(outcome.name().getBytes());
+
+      byte[] signature = this.createSignature(this.createPrivateKey(this.signingKey), new_buffer.array()); // TODO: don't just sign the outcome
 
       return new AuthenticatedDoResponse<K, V, M>(doOperationOutcome, signature);
     } catch (Exception e) {

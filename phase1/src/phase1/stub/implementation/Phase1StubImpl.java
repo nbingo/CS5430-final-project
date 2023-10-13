@@ -66,23 +66,41 @@ public class Phase1StubImpl<K extends Serializable, V extends Serializable, M ex
     return keyPairGenerator.generateKeyPair();
   }
 
-  private Boolean getValid(AbstractAuthenticatedDoResponse<K, V, M> response) throws NoSuchAlgorithmException, InvalidKeySpecException, SignatureException, InvalidKeyException {
-    return this.verifySignature(this.createPublicKey(this.serverVerificationKey), response.outcome.outcome.name().getBytes(), response.digitalSignature);
-  }
-
-  private AbstractAuthenticatedDoResponse<K, V, M> requestAndGetResponse(String userId, DoOperation<K, V, M> doOperation, String mode) throws NoSuchAlgorithmException, InvalidKeyException, SignatureException, IOException {
-    String idNonce = this.addNonce(userId);
-
+  private byte[] convertKVMtoByte(K key, V val, M metaVal) throws IOException {
     ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
     ObjectOutputStream stream = new ObjectOutputStream(byteStream);
-    stream.writeObject(doOperation.key);
-    stream.writeObject(doOperation.val);
-    stream.writeObject(doOperation.metaVal);
+    stream.writeObject(key);
+    stream.writeObject(val);
+    stream.writeObject(metaVal);
     stream.flush();
 
-    byte[] combined = createToSign((idNonce + mode).getBytes(), byteStream.toByteArray());
+    return byteStream.toByteArray();
+  }
 
-    byte[] signature = this.createSignature(userKeys.get(userId).getPrivate(), combined); //TODO: Don't just sign userId
+
+  private Boolean getValid(AbstractAuthenticatedDoResponse<K, V, M> response, String idNonce) throws NoSuchAlgorithmException, InvalidKeySpecException, SignatureException, InvalidKeyException, IOException {
+    byte[] kvmArray = convertKVMtoByte(response.outcome.key, response.outcome.val, response.outcome.metaVal);
+
+    byte[] combined = new byte[idNonce.getBytes().length + kvmArray.length + response.outcome.outcome.name().getBytes().length];
+    ByteBuffer buffer = ByteBuffer.wrap(combined);
+    buffer.put(idNonce.getBytes());
+    buffer.put(kvmArray);
+    buffer.put(response.outcome.outcome.name().getBytes());
+
+    // contents: userid + nonce + key + val + metaVal + outcome
+    return this.verifySignature(this.createPublicKey(this.serverVerificationKey), buffer.array(), response.digitalSignature);
+  }
+
+  private String extractId(String idNonce) {
+    return idNonce.substring(0, idNonce.length()-36);
+  }
+
+  private AbstractAuthenticatedDoResponse<K, V, M> requestAndGetResponse(String idNonce, DoOperation<K, V, M> doOperation, String mode) throws NoSuchAlgorithmException, InvalidKeyException, SignatureException, IOException {
+    byte[] kvmArray = convertKVMtoByte(doOperation.key, doOperation.val, doOperation.metaVal);
+
+    byte[] combined = createToSign((idNonce + mode).getBytes(), kvmArray);
+
+    byte[] signature = this.createSignature(userKeys.get(this.extractId(idNonce)).getPrivate(), combined); //TODO: Don't just sign userId
 
     AbstractAuthenticatedDoRequest<K, V, M> req = new AuthenticatedDoRequest<>(idNonce, doOperation, signature);
 
@@ -139,11 +157,13 @@ public class Phase1StubImpl<K extends Serializable, V extends Serializable, M ex
 
   public Boolean create(String userId, K key, V val, M metaVal) throws RemoteException {
     try {
+      String idNonce = this.addNonce(userId);
+
       DoOperation<K, V, M> doOperation = new DoOperation<>(key, val, metaVal, DoOperation.Operation.CREATE);
 
-      AbstractAuthenticatedDoResponse<K, V, M> response =  requestAndGetResponse(userId, doOperation, DoOperation.Operation.CREATE.name());
+      AbstractAuthenticatedDoResponse<K, V, M> response =  requestAndGetResponse(idNonce, doOperation, DoOperation.Operation.CREATE.name());
 
-      return getValid(response) && response.outcome.outcome == DoOperationOutcome.Outcome.SUCCESS;
+      return getValid(response, idNonce) && response.outcome.outcome == DoOperationOutcome.Outcome.SUCCESS;
     } catch (Exception e) {
       return false;
     }
@@ -151,11 +171,13 @@ public class Phase1StubImpl<K extends Serializable, V extends Serializable, M ex
 
   public Boolean delete(String userId, K key) throws RemoteException {
     try {
+      String idNonce = this.addNonce(userId);
+
       DoOperation<K, V, M> doOperation = new DoOperation<>(key, null, null, DoOperation.Operation.DELETE); // TODO: Make these null?
 
-      AbstractAuthenticatedDoResponse<K, V, M> response =  requestAndGetResponse(userId, doOperation, DoOperation.Operation.DELETE.name());
+      AbstractAuthenticatedDoResponse<K, V, M> response =  requestAndGetResponse(idNonce, doOperation, DoOperation.Operation.DELETE.name());
 
-      return getValid(response) && response.outcome.outcome == DoOperationOutcome.Outcome.SUCCESS;
+      return getValid(response, idNonce) && response.outcome.outcome == DoOperationOutcome.Outcome.SUCCESS;
     } catch (Exception e) {
       return false;
     }
@@ -163,11 +185,13 @@ public class Phase1StubImpl<K extends Serializable, V extends Serializable, M ex
 
   public V readVal(String userId, K key) throws RemoteException, NoSuchElementException {
     try {
+      String idNonce = this.addNonce(userId);
+
       DoOperation<K, V, M> doOperation = new DoOperation<>(key, null, null, DoOperation.Operation.READVAL); // TODO: Make these null?
 
-      AbstractAuthenticatedDoResponse<K, V, M> response =  requestAndGetResponse(userId, doOperation, DoOperation.Operation.READVAL.name());
+      AbstractAuthenticatedDoResponse<K, V, M> response =  requestAndGetResponse(idNonce, doOperation, DoOperation.Operation.READVAL.name());
 
-      boolean valid = getValid(response);
+      boolean valid = getValid(response, idNonce);
 
       if (valid) {
         if (response.outcome.outcome == DoOperationOutcome.Outcome.SUCCESS) {
@@ -187,11 +211,13 @@ public class Phase1StubImpl<K extends Serializable, V extends Serializable, M ex
 
   public M readMetaVal(String userId, K key) throws RemoteException, NoSuchElementException {
     try {
+      String idNonce = this.addNonce(userId);
+
       DoOperation<K, V, M> doOperation = new DoOperation<>(key, null, null, DoOperation.Operation.READMETAVAL); // TODO: Make these null?
 
-      AbstractAuthenticatedDoResponse<K, V, M> response =  requestAndGetResponse(userId, doOperation, DoOperation.Operation.READMETAVAL.name());
+      AbstractAuthenticatedDoResponse<K, V, M> response =  requestAndGetResponse(idNonce, doOperation, DoOperation.Operation.READMETAVAL.name());
 
-      boolean valid = getValid(response);
+      boolean valid = getValid(response, idNonce);
 
       if (valid) {
         if (response.outcome.outcome == DoOperationOutcome.Outcome.SUCCESS) {
@@ -211,11 +237,13 @@ public class Phase1StubImpl<K extends Serializable, V extends Serializable, M ex
 
   public Boolean writeVal(String userId, K key, V newVal) throws RemoteException, IllegalArgumentException {
     try {
+      String idNonce = this.addNonce(userId);
+
       DoOperation<K, V, M> doOperation = new DoOperation<>(key, newVal, null, DoOperation.Operation.WRITEVAL); // TODO: Make these null?
 
-      AbstractAuthenticatedDoResponse<K, V, M> response =  requestAndGetResponse(userId, doOperation, DoOperation.Operation.WRITEVAL.name());
+      AbstractAuthenticatedDoResponse<K, V, M> response =  requestAndGetResponse(idNonce, doOperation, DoOperation.Operation.WRITEVAL.name());
 
-      return returnWriteSuccess(response, getValid(response));
+      return returnWriteSuccess(response, getValid(response, idNonce));
 
     } catch (Exception e) {
       return false;
@@ -224,11 +252,13 @@ public class Phase1StubImpl<K extends Serializable, V extends Serializable, M ex
 
   public Boolean writeMetaVal(String userId, K key, M newMetaVal) throws RemoteException, IllegalArgumentException {
     try {
+      String idNonce = this.addNonce(userId);
+
       DoOperation<K, V, M> doOperation = new DoOperation<>(key, null, newMetaVal, DoOperation.Operation.WRITEMETAVAL); // TODO: Make these null?
 
-      AbstractAuthenticatedDoResponse<K, V, M> response =  requestAndGetResponse(userId, doOperation, DoOperation.Operation.WRITEMETAVAL.name());
+      AbstractAuthenticatedDoResponse<K, V, M> response =  requestAndGetResponse(idNonce, doOperation, DoOperation.Operation.WRITEMETAVAL.name());
 
-      return returnWriteSuccess(response, getValid(response));
+      return returnWriteSuccess(response, getValid(response, idNonce));
     } catch (Exception e) {
       return false;
     }

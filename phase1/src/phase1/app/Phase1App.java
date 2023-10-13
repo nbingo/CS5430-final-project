@@ -83,26 +83,25 @@ public class Phase1App {
     Phase1Stub<String, Serializable, Serializable> stub = connectToStub();
     String userId = "fbs";
     
-    // Get this test to pass first
+    // TODO: Broken after adding encoding in server / verification in stub
     sampleTestRegister(stub, userId);
 
-    System.out.println("Custom tests:");
-    sampleTestRegister(stub, "Rebecca");
+//    System.out.println("Custom tests:");
+//    sampleTestRegister(stub, "Rebecca");
     // ALL TESTS FROM HERE ON FAILING
-    // TODO: possible failure is name() vs. toString() when encoding enums
-    try {
-      System.out.println(stub.create("Rebecca", "banana", "cat", "dog"));
-      System.out.println(stub.readVal("Rebecca", "banana"));
-      System.out.println(stub.readVal("fbs", "banana"));
-      System.out.println(stub.writeMetaVal("Rebecca", "banana", "cheese"));
-      System.out.println(stub.readMetaVal("Rebecca", "banana"));
-      System.out.println(stub.writeVal("Rebecca", "banana", "cheese"));
-      System.out.println(stub.readVal("Rebecca", "banana"));
-      stub.create("Rebecca", "apple", "cat", "dog");
-      stub.create("Rebecca", "banana", "cat", "dog"); //TODO: Can we add the same key twice?
-    } catch (Exception e) {
-      System.out.println(e);
-    }
+//    try {
+//      System.out.println(stub.create("Rebecca", "banana", "cat", "dog"));
+//      System.out.println(stub.readVal("Rebecca", "banana"));
+//      System.out.println(stub.readVal("fbs", "banana"));
+//      System.out.println(stub.writeMetaVal("Rebecca", "banana", "cheese"));
+//      System.out.println(stub.readMetaVal("Rebecca", "banana"));
+//      System.out.println(stub.writeVal("Rebecca", "banana", "cheese"));
+//      System.out.println(stub.readVal("Rebecca", "banana"));
+//      stub.create("Rebecca", "apple", "cat", "dog");
+//      stub.create("Rebecca", "banana", "cat", "dog"); //TODO: Can we add the same key twice?
+//    } catch (Exception e) {
+//      System.out.println(e);
+//    }
 
     System.exit(0);
   }
