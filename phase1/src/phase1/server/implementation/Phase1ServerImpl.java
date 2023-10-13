@@ -1,6 +1,5 @@
 package phase1.server.implementation;
 
-import phase0.implementation.Phase0;
 import phase0.implementation.Phase0Impl;
 import phase1.server.Phase1ServerBase;
 import types.requests.AbstractAuthenticatedDoRequest;
@@ -23,14 +22,14 @@ import java.security.spec.X509EncodedKeySpec;
 import java.util.Hashtable;
 import java.util.NoSuchElementException;
 
-// TODO: TO GENERATE UNIQUE VALUES WITH LOW PROBABLITY OF REPEAT USE UUID
+// TODO: TO GENERATE UNIQUE VALUES WITH LOW PROBABILITY OF REPEAT USE UUID
 public class Phase1ServerImpl<K extends Serializable, V extends Serializable, M extends Serializable> extends Phase1ServerBase<K, V, M> {
 
   private final byte[] signingKey;
   private final byte[] verificationKey;
   private final Hashtable<String, byte[]> activeUsers;
 
-  private Phase0Impl<K, V, M> store; //TODO: Should have a hash table of user IDs to stores :(
+  private final Phase0Impl<K, V, M> store; //TODO: Should have a hash table of user IDs to stores :(
 
   public Phase1ServerImpl() throws IOException {
     super();
@@ -186,7 +185,7 @@ public class Phase1ServerImpl<K extends Serializable, V extends Serializable, M 
 
       byte[] signature = this.createSignature(this.createPrivateKey(this.signingKey), new_buffer.array()); // TODO: don't just sign the outcome
 
-      return new AuthenticatedDoResponse<K, V, M>(doOperationOutcome, signature);
+      return new AuthenticatedDoResponse<>(doOperationOutcome, signature);
     } catch (Exception e) {
       return null;
     }

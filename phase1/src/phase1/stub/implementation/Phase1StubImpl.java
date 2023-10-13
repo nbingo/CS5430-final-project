@@ -19,7 +19,6 @@ import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.security.*;
 import java.security.spec.InvalidKeySpecException;
-import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.X509EncodedKeySpec;
 import java.util.Hashtable;
 import java.util.NoSuchElementException;
@@ -34,12 +33,7 @@ public class Phase1StubImpl<K extends Serializable, V extends Serializable, M ex
   public Phase1StubImpl() throws IOException, NotBoundException {
     super();
     this.serverVerificationKey = super.serverVerificationKey;
-    this.network = super.network;
     this.userKeys = new Hashtable<>();
-  }
-
-  private PrivateKey createPrivateKey(byte[] privateBytes) throws NoSuchAlgorithmException, InvalidKeySpecException {
-    return KeyFactory.getInstance("DSA").generatePrivate(new PKCS8EncodedKeySpec(privateBytes));
   }
 
   private PublicKey createPublicKey(byte[] publicBytes) throws NoSuchAlgorithmException, InvalidKeySpecException {
