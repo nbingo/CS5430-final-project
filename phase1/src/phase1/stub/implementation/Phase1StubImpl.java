@@ -342,7 +342,7 @@ public class Phase1StubImpl<K extends Serializable, V extends Serializable, M ex
 
       // Create the DoOperation to send to server
       // The value and meta-value are left null since they are not needed for this operation
-      DoOperation<K, V, M> doOperation = new DoOperation<>(key, null, null, DoOperation.Operation.READVAL); // TODO: Make these null?
+      DoOperation<K, V, M> doOperation = new DoOperation<>(key, null, null, DoOperation.Operation.READVAL);
 
       // Send request to server and receive response
       AbstractAuthenticatedDoResponse<K, V, M> response =  requestAndGetResponse(idNonce, doOperation, DoOperation.Operation.READVAL.name());
@@ -384,7 +384,7 @@ public class Phase1StubImpl<K extends Serializable, V extends Serializable, M ex
 
       // Create the DoOperation to send to server
       // The value and meta-value are left null since they are not needed for this operation
-      DoOperation<K, V, M> doOperation = new DoOperation<>(key, null, null, DoOperation.Operation.READMETAVAL); // TODO: Make these null?
+      DoOperation<K, V, M> doOperation = new DoOperation<>(key, null, null, DoOperation.Operation.READMETAVAL);
 
       // Send request to server and receive response
       AbstractAuthenticatedDoResponse<K, V, M> response =  requestAndGetResponse(idNonce, doOperation, DoOperation.Operation.READMETAVAL.name());
@@ -426,8 +426,7 @@ public class Phase1StubImpl<K extends Serializable, V extends Serializable, M ex
 
       // Create the DoOperation to send to server
       // The meta-value is left null since it is not needed for this operation
-      DoOperation<K, V, M> doOperation = new DoOperation<>(key, newVal, null, DoOperation.Operation.WRITEVAL); // TODO: Make these null?
-
+      DoOperation<K, V, M> doOperation = new DoOperation<>(key, newVal, null, DoOperation.Operation.WRITEVAL);
       // Send request to server and receive response
       AbstractAuthenticatedDoResponse<K, V, M> response =  requestAndGetResponse(idNonce, doOperation, DoOperation.Operation.WRITEVAL.name());
 
@@ -455,7 +454,7 @@ public class Phase1StubImpl<K extends Serializable, V extends Serializable, M ex
 
       // Create the DoOperation to send to server
       // The value is left null since it is not needed for this operation
-      DoOperation<K, V, M> doOperation = new DoOperation<>(key, null, newMetaVal, DoOperation.Operation.WRITEMETAVAL); // TODO: Make these null?
+      DoOperation<K, V, M> doOperation = new DoOperation<>(key, null, newMetaVal, DoOperation.Operation.WRITEMETAVAL);
 
       // Send request to server and receive response
       AbstractAuthenticatedDoResponse<K, V, M> response =  requestAndGetResponse(idNonce, doOperation, DoOperation.Operation.WRITEMETAVAL.name());
