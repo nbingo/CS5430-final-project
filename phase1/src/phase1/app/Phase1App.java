@@ -98,13 +98,15 @@ public class Phase1App {
       System.out.println(stub.writeVal("fbs", "k1.1", "v2.1"));
       System.out.println(stub.readVal("user1", "k1.1"));
       System.out.println(stub.create("user1", "k1.2", "v1.2", "m1.2"));
-      System.out.println(stub.create("fbs", "k1.2", "v2.2", "m2.2")); //TODO: Can we add the same key twice?
+      System.out.println(stub.create("fbs", "k1.2", "v2.2", "m2.2")); // Should just overwrite the previous value and meta-value of k1.2
       System.out.println(stub.delete("user1", "k1.1"));
+      System.out.println(stub.delete("user1", "k1.1")); // Should work because the key already doesn't exist
+      System.out.println(stub.create("user1", "k1.3", "v1.3", "m1.3"));
 
       System.out.println("=====Tests that should NOT work=====");
       System.out.println(stub.registerUser("user1"));
       System.out.println(stub.create("user.bla", "k.bla", "v.bla", "m.bla"));
-      System.out.println(stub.delete("user1", "k1.1"));
+      System.out.println(stub.delete("user1", "k1.1")); // TODO This should actually work!
       System.out.println(stub.delete("user.bla", "k1.2"));
       System.out.println(stub.readMetaVal("user1", "m.bla"));
       System.out.println(stub.readMetaVal("user.bla", "k1.2"));
