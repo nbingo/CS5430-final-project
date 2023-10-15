@@ -85,12 +85,14 @@ public class Phase1App {
     sampleTestRegister(stub, userId);
 
     System.out.println("=============Custom tests=============");
-    sampleTestRegister(stub, "user1");
     try {
       System.out.println("=====Tests that should work=====");
+      sampleTestRegister(stub, "user1");
       System.out.println(stub.create("user1", "k1.1", "v1.1", "m1.1"));
       System.out.println(stub.readVal("user1", "k1.1"));
+      System.out.println(stub.readMetaVal("user1", "k1.1"));
       System.out.println(stub.readVal("fbs", "k1.1"));
+      System.out.println(stub.readMetaVal("fbs", "k1.1"));
       System.out.println(stub.writeMetaVal("user1", "k1.1", "v1.1-mod"));
       System.out.println(stub.readMetaVal("user1", "k1.1"));
       System.out.println(stub.writeVal("fbs", "k1.1", "v2.1"));
