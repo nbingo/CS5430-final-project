@@ -234,9 +234,8 @@ public class Phase1StubImpl<K extends Serializable, V extends Serializable, M ex
    */
   public Boolean registerUser(String userId) throws RemoteException {
     try {
-      // Create a signing (private) key / verification (public) key pair for the new user and add to the maintained hashtable of users and keyparis
+      // Create a signing (private) key / verification (public) key pair for the new user
       KeyPair keyPair = this.createKeyPair();
-      this.userKeys.put(userId, keyPair);
 
       // Create a unique nonce for this request
       String idNonce = this.addNonce(userId);
@@ -262,8 +261,13 @@ public class Phase1StubImpl<K extends Serializable, V extends Serializable, M ex
       // Verify the signature from the server
       boolean valid = this.verifySignature(this.createPublicKey(this.serverVerificationKey), return_buffer.array(), response.digitalSignature);
 
-      // Return true if the signature is verifiable and if the registration was successful and false otherwise
-      return valid && response.status == AbstractAuthenticatedRegisterResponse.Status.OK;
+      // Return true and add user to the hashtable of users and their keypairs if the signature is verifiable and if the registration was successful and false otherwise
+      if (valid && response.status == AbstractAuthenticatedRegisterResponse.Status.OK) {
+        this.userKeys.put(userId, keyPair);
+        return true;
+      } else {
+        return false;
+      }
     } catch (Exception e) {
       // Return false if any part of the registration throws an exception
       return false;

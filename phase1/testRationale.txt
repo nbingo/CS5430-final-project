@@ -7,12 +7,12 @@ should not. In the calls that should work, we check that we can:
 * Users can read all elements of existing K,V,M triples that they did not create
 * Users can modify existing values and meta values of K,V,M triples
 * Users can delete existing K,V,M triples
+* K,V,M triples can be deleted twice / K,V,M triples that do not exist can be deleted – this mimics hash table behavior
 
 In the calls that should NOT work, we check that:
 
 * Users cannot register the same username again
 * K,V,M triples cannot be created by a user that does not exist
-* K,V,M triples cannot be deleted twice / K,V,M triples that do not exist cannot be deleted
 * Users cannot read values or meta-values for keys that do not exist
 * Users that do not exist cannot read values or meta-values
 * Users cannot write values or meta-values for keys that do not exist
@@ -22,6 +22,8 @@ Our expected output, should everything run correctly, is:
 
 =============Custom tests=============
 =====Tests that should work=====
+true
+true
 true
 v1.1
 m1.1
@@ -33,9 +35,7 @@ true
 v2.1
 true
 true
-true
 =====Tests that should NOT work=====
-false
 false
 false
 false

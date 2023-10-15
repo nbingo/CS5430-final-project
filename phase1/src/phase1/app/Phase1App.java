@@ -81,37 +81,46 @@ public class Phase1App {
     Phase1Stub<String, Serializable, Serializable> stub = connectToStub();
     String userId = "fbs";
     
-    // TODO: Broken after adding encoding in server / verification in stub
     sampleTestRegister(stub, userId);
 
+    // Custom tests
     System.out.println("=============Custom tests=============");
     try {
+      // Tests that should work
       System.out.println("=====Tests that should work=====");
+      // Test registration
       sampleTestRegister(stub, "user1");
+      // Test create
       System.out.println(stub.create("user1", "k1.1", "v1.1", "m1.1"));
+      System.out.println(stub.create("user1", "k1.2", "v1.2", "m1.2"));
+      System.out.println(stub.create("fbs", "k1.2", "v2.2", "m2.2")); // Should just overwrite the previous value and meta-value of k1.2
+      // Test read functions
       System.out.println(stub.readVal("user1", "k1.1"));
       System.out.println(stub.readMetaVal("user1", "k1.1"));
       System.out.println(stub.readVal("fbs", "k1.1"));
       System.out.println(stub.readMetaVal("fbs", "k1.1"));
+      // Test write functions and read resulting functions to ensure changes sucessful
       System.out.println(stub.writeMetaVal("user1", "k1.1", "v1.1-mod"));
       System.out.println(stub.readMetaVal("user1", "k1.1"));
       System.out.println(stub.writeVal("fbs", "k1.1", "v2.1"));
       System.out.println(stub.readVal("user1", "k1.1"));
-      System.out.println(stub.create("user1", "k1.2", "v1.2", "m1.2"));
-      System.out.println(stub.create("fbs", "k1.2", "v2.2", "m2.2")); // Should just overwrite the previous value and meta-value of k1.2
+      // Test delete functions
       System.out.println(stub.delete("user1", "k1.1"));
       System.out.println(stub.delete("user1", "k1.1")); // Should work because the key already doesn't exist
-      System.out.println(stub.create("user1", "k1.3", "v1.3", "m1.3"));
 
+      // Tests that should not work
       System.out.println("=====Tests that should NOT work=====");
+      // Ensure register function fails correctly
       System.out.println(stub.registerUser("user1"));
+      // Ensure create and delete functions fail correctly
       System.out.println(stub.create("user.bla", "k.bla", "v.bla", "m.bla"));
-      System.out.println(stub.delete("user1", "k1.1")); // TODO This should actually work!
       System.out.println(stub.delete("user.bla", "k1.2"));
+      // Ensure read functions fail correctly
       System.out.println(stub.readMetaVal("user1", "m.bla"));
       System.out.println(stub.readMetaVal("user.bla", "k1.2"));
       System.out.println(stub.readVal("user1", "v.bla"));
       System.out.println(stub.readVal("user.bla", "k1.2"));
+      // Ensure write functions fail correctly
       System.out.println(stub.writeVal("user1", "k.bla", "v.bla"));
       System.out.println(stub.writeVal("user.bla", "k1.1", "v.bla"));
       System.out.println(stub.writeMetaVal("user1", "k.bla", "m.bla"));
