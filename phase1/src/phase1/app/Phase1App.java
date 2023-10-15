@@ -14,10 +14,8 @@ import java.lang.AssertionError;
 import java.lang.ClassCastException;
 import java.rmi.RemoteException;
 import java.rmi.NotBoundException;
-import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
-import java.util.NoSuchElementException;
 
 public class Phase1App {
 
@@ -86,18 +84,34 @@ public class Phase1App {
     // TODO: Broken after adding encoding in server / verification in stub
     sampleTestRegister(stub, userId);
 
-    System.out.println("Custom tests:");
-    sampleTestRegister(stub, "Rebecca");
+    System.out.println("=============Custom tests=============");
+    sampleTestRegister(stub, "user1");
     try {
-      System.out.println(stub.create("Rebecca", "banana", "cat", "dog"));
-      System.out.println(stub.readVal("Rebecca", "banana"));
-      System.out.println(stub.readVal("fbs", "banana"));
-      System.out.println(stub.writeMetaVal("Rebecca", "banana", "cheese"));
-      System.out.println(stub.readMetaVal("Rebecca", "banana"));
-      System.out.println(stub.writeVal("Rebecca", "banana", "cheese"));
-      System.out.println(stub.readVal("Rebecca", "banana"));
-      stub.create("Rebecca", "apple", "cat", "dog");
-      stub.create("Rebecca", "banana", "cat", "dog"); //TODO: Can we add the same key twice?
+      System.out.println("=====Tests that should work=====");
+      System.out.println(stub.create("user1", "k1.1", "v1.1", "m1.1"));
+      System.out.println(stub.readVal("user1", "k1.1"));
+      System.out.println(stub.readVal("fbs", "k1.1"));
+      System.out.println(stub.writeMetaVal("user1", "k1.1", "v1.1-mod"));
+      System.out.println(stub.readMetaVal("user1", "k1.1"));
+      System.out.println(stub.writeVal("fbs", "k1.1", "v2.1"));
+      System.out.println(stub.readVal("user1", "k1.1"));
+      System.out.println(stub.create("user1", "k1.2", "v1.2", "m1.2"));
+      System.out.println(stub.create("fbs", "k1.2", "v2.2", "m2.2")); //TODO: Can we add the same key twice?
+      System.out.println(stub.delete("user1", "k1.1"));
+
+      System.out.println("=====Tests that should NOT work=====");
+      System.out.println(stub.registerUser("user1"));
+      System.out.println(stub.create("user.bla", "k.bla", "v.bla", "m.bla"));
+      System.out.println(stub.delete("user1", "k1.1"));
+      System.out.println(stub.delete("user.bla", "k1.2"));
+      System.out.println(stub.readMetaVal("user1", "m.bla"));
+      System.out.println(stub.readMetaVal("user.bla", "k1.2"));
+      System.out.println(stub.readVal("user1", "v.bla"));
+      System.out.println(stub.readVal("user.bla", "k1.2"));
+      System.out.println(stub.writeVal("user1", "k.bla", "v.bla"));
+      System.out.println(stub.writeVal("user.bla", "k1.1", "v.bla"));
+      System.out.println(stub.writeMetaVal("user1", "k.bla", "m.bla"));
+      System.out.println(stub.writeMetaVal("user.bla", "k1.1", "m.bla"));
     } catch (Exception e) {
       System.out.println(e);
     }
