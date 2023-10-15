@@ -1,0 +1,80 @@
+In our custom tests we added to Phase1App.java, we have sections of tests for calls that should work and calls that
+should not. In the calls that should work, we check that we can:
+
+* Register multiple users
+* Create new K,V,M triples
+* Users can read all elements of existing K,V,M triples that they created
+* Users can read all elements of existing K,V,M triples that they did not create
+* Users can modify existing values and meta values of K,V,M triples
+* Users can delete existing K,V,M triples
+
+In the calls that should NOT work, we check that:
+
+* Users cannot register the same username again
+* K,V,M triples cannot be created by a user that does not exist
+* K,V,M triples cannot be deleted twice / K,V,M triples that do not exist cannot be deleted
+* Users cannot read values or meta-values for keys that do not exist
+* Users that do not exist cannot read values or meta-values
+* Users cannot write values or meta-values for keys that do not exist
+* Users that do not exist cannot write values or meta-values
+
+Our expected output, should everything run correctly, is:
+
+=============Custom tests=============
+=====Tests that should work=====
+true
+v1.1
+m1.1
+v1.1
+m1.1
+true
+v1.1-mod
+true
+v2.1
+true
+true
+true
+=====Tests that should NOT work=====
+false
+false
+false
+false
+null
+null
+null
+null
+false
+false
+false
+false
+0
+
+
+To provide adequate security for this K,V,M store, we signed the following objects for each method:
+
+====Server====
+* Register requests: We sign the userID, the nonce provided by the user in the request, and the status of the request.
+* All non-register requests: We sign the userID, the nonce provided by the user in the request, the key, value, and
+meta-value, and the outcome. For read and write requests, the value and meta-value are passed in as null by the Stub.
+For read requests, we change the value or meta-value to the item read and sign the new value or meta-value.
+
+For all requests, we re-sign the nonce provided by the Stub so that it can verify that the server is responding to the
+request it just sent and no replay attack is being undertaken.
+
+====Stub====
+* Register requests: We sign the userID, a unique nonce (produced with UUID), and the user's public key.
+* All non-register requests: We sign the userID, a unique nonce (produced with UUID), the type of operation (e.g.,
+CREATE, READVAL, etc), and the key, value, and meta-value associated with the request. If the request is a read, value
+and meta-value are null. If the request is a write, the value not being written to is null.
+
+The nonce used when verifying server responses is always the nonce produced at the top of the method, before the request
+was sent. Thus, we ensure that the response received is to the request sent.
+
+We protect against replay attacks to the user with the unique nonce that we send in every request. If someone were to
+attempt to replay a server response to the user, verification would fail since the signed nonce would not match the
+nonce of their request.
+
+We currently do not attempt to prevent replay attacks to the server because, according to the specifications, any user
+can access and modify or read the K,V,M triples created by any other user. In addition, we do not attempt to prevent
+man-in-the-middle attacks since intruders would not learn any information they could not learn by just registering
+directly with the server.
