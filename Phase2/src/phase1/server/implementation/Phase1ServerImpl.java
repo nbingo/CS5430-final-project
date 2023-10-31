@@ -1,5 +1,6 @@
 package phase1.server.implementation;
 
+import org.jetbrains.annotations.NotNull;
 import phase0.implementation.Phase0Impl;
 import phase1.server.Phase1ServerBase;
 import types.requests.AbstractAuthenticatedDoRequest;
@@ -120,6 +121,32 @@ public class Phase1ServerImpl<K extends Serializable, V extends Serializable, M 
 
     return byteStream.toByteArray();
   }
+
+  // TODO: Add Javadocs for me!
+  protected AuthenticatedDoResponse<K, V, M> getSignedAuthenticatedDoResponse(AbstractAuthenticatedDoRequest<K, V, M> req, K key, V val, M metaVal, DoOperationOutcome.Outcome outcome) throws IOException, NoSuchAlgorithmException, InvalidKeyException, SignatureException, InvalidKeySpecException {
+    // Put the resulting key, value, and meta-value in our do operation outcome, along with the outcome status. If we
+    // performed a read operation, then the value or meta-value, whichever was requested, is changed and returned via
+    // the DoOperationResponse.
+    DoOperationOutcome<K, V, M> doOperationOutcome = new DoOperationOutcome<>(key, val, metaVal, outcome);
+
+    // Convert the K,V,M triple to a byte array for signing
+    byte[] newKeyValMetaVal = convertKVMtoByte(key, val, metaVal);
+
+    // Combine the converted K,V,M triple with the user id, the given nonce, and the outcome of the operation into one
+    // byte array for signing.
+    byte[] new_combined = new byte[req.userId.getBytes().length + newKeyValMetaVal.length + outcome.name().getBytes().length];
+    ByteBuffer new_buffer = ByteBuffer.wrap(new_combined);
+    new_buffer.put(req.userId.getBytes());
+    new_buffer.put(newKeyValMetaVal);
+    new_buffer.put(outcome.name().getBytes());
+
+    // Sign the byte array using the server's private/signing key
+    byte[] signature = this.createSignature(this.createPrivateKey(this.signingKey), new_buffer.array());
+
+    // Return the response
+    return new AuthenticatedDoResponse<>(doOperationOutcome, signature);
+  }
+
 
   /**
    * This method can handle an AbstractAuthenticatedRegisterRequest to create a new user. It will attempt to create the
@@ -260,27 +287,7 @@ public class Phase1ServerImpl<K extends Serializable, V extends Serializable, M 
         }
       }
 
-      // Put the resulting key, value, and meta-value in our do operation outcome, along with the outcome status. If we
-      // performed a read operation, then the value or meta-value, whichever was requested, is changed and returned via
-      // the DoOperationResponse.
-      DoOperationOutcome<K, V, M> doOperationOutcome = new DoOperationOutcome<>(key, val, metaVal, outcome);
-
-      // Convert the K,V,M triple to a byte array for signing
-      byte[] newKeyValMetaVal = convertKVMtoByte(key, val, metaVal);
-
-      // Combine the converted K,V,M triple with the user id, the given nonce, and the outcome of the operation into one
-      // byte array for signing.
-      byte[] new_combined = new byte[req.userId.getBytes().length + newKeyValMetaVal.length + outcome.name().getBytes().length];
-      ByteBuffer new_buffer = ByteBuffer.wrap(new_combined);
-      new_buffer.put(req.userId.getBytes());
-      new_buffer.put(newKeyValMetaVal);
-      new_buffer.put(outcome.name().getBytes());
-
-      // Sign the byte array using the server's private/signing key
-      byte[] signature = this.createSignature(this.createPrivateKey(this.signingKey), new_buffer.array());
-
-      // Return the response
-      return new AuthenticatedDoResponse<>(doOperationOutcome, signature);
+      return getSignedAuthenticatedDoResponse(req, key, val, metaVal, outcome);
     } catch (Exception e) {
       return null;
     }

@@ -75,7 +75,6 @@ public class Phase2ServerImpl<K extends Serializable, V extends Serializable> ex
     K key = req.doOperation.key;
     ServerACLObject metaVal = (ServerACLObject)req.doOperation.metaVal;
 
-    DoOperationOutcome.Outcome outcome = DoOperationOutcome.Outcome.AUTHORIZATION_FAILURE;
     AbstractAuthenticatedDoResponse response = null;
 
     switch (req.doOperation.operation) {
@@ -140,14 +139,14 @@ public class Phase2ServerImpl<K extends Serializable, V extends Serializable> ex
         break;
     }
 
-    if (response != null) {
-      // TODO: HI FILL ME OUT
-      // Specifically, create a signed response if one wasn't returned from the switch statement
-      // This will invovle extracting the signing function out from Phase1Impl
+    try {
+      if (response != null) {
+        response = super.getSignedAuthenticatedDoResponse(req, req.doOperation.key, req.doOperation.val, req.doOperation.metaVal, DoOperationOutcome.Outcome.AUTHORIZATION_FAILURE);
+      }
+    } catch (Exception e) {
+      return null;
     }
 
-    // return  AUTHORIZATION_FAILURE if not authorized
-    // otherwise call super.authenticatedDo()
     return response;
   }
 }
