@@ -32,6 +32,4 @@ public class ServerACLObject<K extends Serializable> extends AbstractServerACLOb
     public Set<K> getIndirects() {
         return this.indirects;
     }
-
-  // you may add your own fields and methods here
 }

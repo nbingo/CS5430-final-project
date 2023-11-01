@@ -1,6 +1,5 @@
 package phase1.server.implementation;
 
-import org.jetbrains.annotations.NotNull;
 import phase0.implementation.Phase0Impl;
 import phase1.server.Phase1ServerBase;
 import types.requests.AbstractAuthenticatedDoRequest;

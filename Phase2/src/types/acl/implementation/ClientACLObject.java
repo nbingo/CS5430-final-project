@@ -7,6 +7,7 @@ import java.util.HashSet;
 import java.util.Hashtable;
 import java.util.Set;
 
+// TODO: Add documentation
 public class ClientACLObject<K extends Serializable> extends AbstractClientACLObject  {
 
     private Set<String> readers;
@@ -20,5 +21,20 @@ public class ClientACLObject<K extends Serializable> extends AbstractClientACLOb
         indirects = new HashSet<K>();
         owner = o;
     }
-  // you may add your own fields and methods here
+
+    public String getOwner() {
+        return this.owner;
+    }
+
+    public Set<String> getReaders() {
+        return this.readers;
+    }
+
+    public Set<String> getWriters() {
+        return this.writers;
+    }
+
+    public Set<K> getIndirects() {
+        return this.indirects;
+    }
 }
