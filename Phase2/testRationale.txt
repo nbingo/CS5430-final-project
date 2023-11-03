@@ -1,0 +1,119 @@
+In our custom tests we added to Phase2App.java, we have sections of tests for calls that should work and calls that
+should not. In the calls that should work, we check that we can:
+
+* Register multiple users
+* Create new K,V,M triples
+    * With owner in ACL readers and writers
+    * With owner gaining read and write access through indirects
+    * For a key that already exists as owner
+    * With two users (including owner) in ACL readers and writers
+    * With another user gaining access through indirects
+* Users can read...
+    * Values to which they have direct access (owner and not owner)
+    * Values to which they have indirect access (owner and not owner)
+    * MetaValues for keys they own
+* Users can write...
+    * Values to which they have direct access (owner and not owner)
+    * Values to which they have indirect access (owner and not owner)
+    * MetaValues for keys they own
+* Users can delete...
+    * Keys they own
+    * Nonexistant keys
+
+In the calls that should NOT work, we check that:
+
+* Cannot register the same username again
+* Users cannot create...
+    * Keys with another user listed as owner in metaVal
+    * Keys that already exist if they are not the owner
+    * Keys if they are not registered
+* Users cannot read...
+    * Values to which they do not have direct or indirect access (owner or not owner)
+    * MetaValues for keys they do not own
+    * Values or metaValues for keys that don't exist
+    * Values or metaValues if they are not registered
+* Users cannot write...
+    * Values to which they do not have direct or indirect access (owner or not owner)
+    * MetaValues for keys they do not own
+    * Values or metaValues for keys that don't exist
+    * Values or metaValues if they are not registered
+* Users cannot delete keys they do not own
+
+Our expected output, should everything run correctly, is:
+
+=============Custom tests=============
+=====Tests that should work=====
+true
+true
+true
+true
+true
+v1.3
+v1.2
+v2.1
+v2.2
+types.acl.implementation.ClientACLObject@1442d7b5
+true
+true
+true
+true
+true
+true
+true
+=====Tests that should NOT work=====
+false
+false
+false
+false
+null
+null
+null
+null
+null
+null
+null
+false
+false
+false
+false
+false
+false
+false
+false
+0
+
+To ensure proper authorization, in the Phase 2 server implementation we ensure that only users with permission
+(as defined in project specs) may complete an action. Then, the bulk of the task is passed on to the Phase 1
+server implementation. Similarly, in the Phase 2 stub we pass on the functionality to to the Phase 1 stub
+implementation.
+
+The following section is copied from our Phase 1 Rationale.
+
+To provide adequate security for this K,V,M store, we signed the following objects for each method:
+
+====Server====
+* Register requests: We sign the userID, the nonce provided by the user in the request, and the status of the request.
+* All non-register requests: We sign the userID, the nonce provided by the user in the request, the key, value, and
+meta-value, and the outcome. For read and write requests, the value and meta-value are passed in as null by the Stub.
+For read requests, we change the value or meta-value to the item read and sign the new value or meta-value.
+
+For all requests, we re-sign the nonce provided by the Stub so that it can verify that the server is responding to the
+request it just sent and no replay attack is being undertaken.
+
+====Stub====
+* Register requests: We sign the userID, a unique nonce (produced with UUID), and the user's public key.
+* All non-register requests: We sign the userID, a unique nonce (produced with UUID), the type of operation (e.g.,
+CREATE, READVAL, etc), and the key, value, and meta-value associated with the request. If the request is a read, value
+and meta-value are null. If the request is a write, the value not being written to is null.
+
+The nonce used when verifying server responses is always the nonce produced at the top of the method, before the request
+was sent. Thus, we ensure that the response received is to the request sent.
+
+We protect against replay attacks to the user with the unique nonce that we send in every request. If someone were to
+attempt to replay a server response to the user, verification would fail since the signed nonce would not match the
+nonce of their request.
+
+We currently do not attempt to prevent replay attacks to the server because, according to the specifications, any user
+can access and modify or read the K,V,M triples created by any other user. In addition, we do not attempt to prevent
+man-in-the-middle attacks since intruders would not learn any information they could not learn by just registering
+directly with the server.

@@ -3,6 +3,8 @@ package types.acl.implementation;
 import types.acl.AbstractClientACLObject;
 
 import java.io.Serializable;
+import java.lang.reflect.Array;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Hashtable;
 import java.util.Set;
@@ -15,11 +17,15 @@ public class ClientACLObject<K extends Serializable> extends AbstractClientACLOb
     private Set<K> indirects;
     private String owner;
 
-    public ClientACLObject(String o) {
-        readers = new HashSet<String>();
-        writers = new HashSet<String>();
-        indirects = new HashSet<K>();
+    public ClientACLObject(String o, ArrayList<String> r, ArrayList<String> w, ArrayList<K> i) {
+        readers = r == null ? new HashSet<String>() : new HashSet<String>(r);
+        writers = w == null ? new HashSet<String>() : new HashSet<String>(w);
+        indirects = i == null ? new HashSet<K>() : new HashSet<K>(i);
         owner = o;
+    }
+
+    public ClientACLObject(String o) {
+        this(o, null, null, null);
     }
 
     public String getOwner() {

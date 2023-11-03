@@ -32,7 +32,7 @@ public class Phase2ServerImpl<K extends Serializable, V extends Serializable>
   private Set<String> getAccessSet(K k, String mode) {
     ClientACLObject acl = (ClientACLObject) this.store.readMetaVal(k);
     Set<String> usersWithAccess;
-    if (mode == "readers") {
+    if (mode.equals("readers")) {
       usersWithAccess = acl.getReaders();
     } else {
       usersWithAccess = acl.getWriters();
@@ -49,7 +49,7 @@ public class Phase2ServerImpl<K extends Serializable, V extends Serializable>
       keysChecked.add(keyToCheck);
 
       ClientACLObject keyAcl = (ClientACLObject) this.store.readMetaVal(keyToCheck);
-      if (mode == "readers") {
+      if (mode.equals("readers")) {
         usersWithAccess.addAll(keyAcl.getReaders());
       } else {
         usersWithAccess.addAll(keyAcl.getWriters());
@@ -75,14 +75,10 @@ public class Phase2ServerImpl<K extends Serializable, V extends Serializable>
   // TODO: Change to using client ACT object throughout
   public AbstractAuthenticatedDoResponse<K, V, AbstractClientACLObject> authenticatedDo(
       AbstractAuthenticatedDoRequest<K, V, AbstractClientACLObject> req) {
-    System.out.println("No we actually entered Phase2 authenticatedDo");
-    String userId = req.userId;
+    String userId = super.extractId(req.userId);
     K key = req.doOperation.key;
-    System.out.println(".... it's the cast isnt it");
-    System.out.println(req.doOperation.metaVal);
 
     ClientACLObject metaVal = (ClientACLObject) req.doOperation.metaVal;
-    System.out.println("Entered server authenticatedDo");
     AbstractAuthenticatedDoResponse response = null;
 
     switch (req.doOperation.operation) {
@@ -90,22 +86,19 @@ public class Phase2ServerImpl<K extends Serializable, V extends Serializable>
         if (super.store.containsKey(key)) {
           ClientACLObject kMetaVal = (ClientACLObject) super.store.readMetaVal(key);
 
-          if (kMetaVal.getOwner() == userId) {
+          if (kMetaVal.getOwner().equals(userId)) {
             response = super.authenticatedDo(req);
-            System.out.println("Server overwrote key");
           }
-        } else {
+        } else if (metaVal.getOwner().equals(userId)){ // Prevents users from creating a key they don't own
           response = super.authenticatedDo(req);
-          System.out.println("Server created key");
         }
-        System.out.println("Finished server CREATE");
         break;
       case DELETE:
         // TODO: ask what we should do in a delete of a non-existant key
         if (super.store.containsKey(key)) {
           ClientACLObject kMetaVal = (ClientACLObject) super.store.readMetaVal(key);
 
-          if (kMetaVal.getOwner() == userId) {
+          if (kMetaVal.getOwner().equals(userId)) {
             response = super.authenticatedDo(req);
           }
         } else {
@@ -123,7 +116,7 @@ public class Phase2ServerImpl<K extends Serializable, V extends Serializable>
         if (super.store.containsKey(key)) {
           ClientACLObject kMetaVal = (ClientACLObject) super.store.readMetaVal(key);
 
-          if (kMetaVal.getOwner() == userId) {
+          if (kMetaVal.getOwner().equals(userId)) {
             response = super.authenticatedDo(req);
           }
         } else {
@@ -141,7 +134,7 @@ public class Phase2ServerImpl<K extends Serializable, V extends Serializable>
         if (super.store.containsKey(key)) {
           ClientACLObject kMetaVal = (ClientACLObject) super.store.readMetaVal(key);
 
-          if (kMetaVal.getOwner() == userId) {
+          if (kMetaVal.getOwner().equals(userId)) {
             response = super.authenticatedDo(req);
           }
         } else {
@@ -151,7 +144,7 @@ public class Phase2ServerImpl<K extends Serializable, V extends Serializable>
     }
 
     try {
-      if (response != null) {
+      if (response == null) {
         response = super.getSignedAuthenticatedDoResponse(req, req.doOperation.key, req.doOperation.val,
             req.doOperation.metaVal, DoOperationOutcome.Outcome.AUTHORIZATION_FAILURE);
       }

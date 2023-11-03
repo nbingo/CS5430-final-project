@@ -20,6 +20,8 @@ import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.NoSuchElementException;
 
 public class Phase2App {
@@ -98,45 +100,59 @@ public class Phase2App {
 
     System.out.println("=============Custom tests=============");
     try {
-      // Tests that should work
+      // TESTS THAT SHOULD WORK
       System.out.println("=====Tests that should work=====");
       // Test registration
       sampleTestRegister(stub, "user1");
       // Test create
-      System.out.println(stub.create("user1", "k1.1", "v1.1", new ClientACLObject("user1")));
-//      System.out.println(stub.create("user1", "k1.2", "v1.2", "m1.2"));
-//      System.out.println(stub.create("fbs", "k1.2", "v2.2", "m2.2")); // Should just overwrite the previous value and meta-value of k1.2
-//      // Test read functions
-//      System.out.println(stub.readVal("user1", "k1.1"));
-//      System.out.println(stub.readMetaVal("user1", "k1.1"));
-//      System.out.println(stub.readVal("fbs", "k1.1"));
-//      System.out.println(stub.readMetaVal("fbs", "k1.1"));
-//      // Test write functions and read resulting functions to ensure changes sucessful
-//      System.out.println(stub.writeMetaVal("user1", "k1.1", "v1.1-mod"));
-//      System.out.println(stub.readMetaVal("user1", "k1.1"));
-//      System.out.println(stub.writeVal("fbs", "k1.1", "v2.1"));
-//      System.out.println(stub.readVal("user1", "k1.1"));
-//      // Test delete functions
-//      System.out.println(stub.delete("user1", "k1.1"));
-//      System.out.println(stub.delete("user1", "k1.1")); // Should work because the key already doesn't exist
-//
-//      // Tests that should not work
-//      System.out.println("=====Tests that should NOT work=====");
-//      // Ensure register function fails correctly
-//      System.out.println(stub.registerUser("user1"));
-//      // Ensure create and delete functions fail correctly
-//      System.out.println(stub.create("user.bla", "k.bla", "v.bla", "m.bla"));
-//      System.out.println(stub.delete("user.bla", "k1.2"));
-//      // Ensure read functions fail correctly
-//      System.out.println(stub.readMetaVal("user1", "m.bla"));
-//      System.out.println(stub.readMetaVal("user.bla", "k1.2"));
-//      System.out.println(stub.readVal("user1", "v.bla"));
-//      System.out.println(stub.readVal("user.bla", "k1.2"));
-//      // Ensure write functions fail correctly
-//      System.out.println(stub.writeVal("user1", "k.bla", "v.bla"));
-//      System.out.println(stub.writeVal("user.bla", "k1.1", "v.bla"));
-//      System.out.println(stub.writeMetaVal("user1", "k.bla", "m.bla"));
-//      System.out.println(stub.writeMetaVal("user.bla", "k1.1", "m.bla"));
+      System.out.println(stub.create("user1", "k1.1", "v1.1", new ClientACLObject("user1", new ArrayList<String>(Arrays.asList("user1")), new ArrayList<String>(Arrays.asList("user1")), null))); // Create key with owner in readers and writers
+      System.out.println(stub.create("user1", "k1.2", "v1.2", new ClientACLObject("user1", null, null, new ArrayList<String>(Arrays.asList("k1.1"))))); // Create key with owner gaining access through indirects
+      System.out.println(stub.create("user1", "k1.1", "v1.3", new ClientACLObject("user1", new ArrayList<String>(Arrays.asList("user1")), new ArrayList<String>(Arrays.asList("user1")), null))); // Create key that exists already as owner
+      System.out.println(stub.create("fbs", "k2.1", "v2.1", new ClientACLObject("fbs", new ArrayList<String>(Arrays.asList("fbs", "user1")), new ArrayList<String>(Arrays.asList("fbs", "user1")), null))); // Create key with two users (including owner) in readers and writers
+      System.out.println(stub.create("fbs", "k2.2", "v2.2", new ClientACLObject("fbs", null, null, new ArrayList<String>(Arrays.asList("k1.1"))))); // Create key with another user gaining access through indirects
+      // Test read functions
+      System.out.println(stub.readVal("user1", "k1.1")); // Read val direct access (owner)
+      System.out.println(stub.readVal("user1", "k1.2")); // Read val with indirect access (owner)
+      System.out.println(stub.readVal("user1", "k2.1")); // Read val with direct access (not owner)
+      System.out.println(stub.readVal("user1", "k2.2")); // Read val with indirect access (not owner)
+      System.out.println(stub.readMetaVal("user1", "k1.1")); // Read metaVal as owner
+      // Test write functions and read resulting functions to ensure changes sucessful
+      System.out.println(stub.writeVal("user1", "k1.1", "v1.1.2")); // Write val direct access (owner)
+      System.out.println(stub.writeVal("user1", "k1.2", "v1.2.2")); // Write val with indirect access (owner)
+      System.out.println(stub.writeVal("user1", "k2.1", "v2.1.2")); // Write val with direct access (not owner)
+      System.out.println(stub.writeVal("user1", "k2.2", "v2.2.2")); // Write val with indirect access (not owner)
+      System.out.println(stub.writeMetaVal("fbs", "k2.1", new ClientACLObject("fbs"))); // Write metaVal as owner
+      // Test delete functions
+      System.out.println(stub.delete("user1", "k1.1")); // Delete key user owns
+      System.out.println(stub.delete("user1", "k1.1")); // Delete key that doesn't exist
+
+      // TESTS THAT SHOULDN'T WORK
+      System.out.println("=====Tests that should NOT work=====");
+      // Ensure register function fails correctly
+      System.out.println(stub.registerUser("user1"));
+      // Ensure create functions fail correctly
+      System.out.println(stub.create("user1", "k1.3", "v1.3", new ClientACLObject("fbs"))); // Cannot create key with another user as owner
+      System.out.println(stub.create("fbs", "k1.2", "v2.2", new ClientACLObject("fbs"))); // Cannot create key that exists already if not owner
+      System.out.println(stub.create("user.bla", "k.bla", "v.bla", new ClientACLObject("user.bla"))); // Nonexistant user cannot create key
+      // Ensure read functions fail correctly
+      System.out.println(stub.readVal("fbs", "k2.1")); // Cannot read val without direct or indirect access (owner)
+      System.out.println(stub.readVal("fbs", "k1.1")); // Cannot read val without direct or indirect access (not owner)
+      System.out.println(stub.readMetaVal("fbs", "k1.1")); // Cannot read metaVal if not owner
+      System.out.println(stub.readVal("fbs", "k1.bla")); // Cannot read val for key that doesn't exist
+      System.out.println(stub.readMetaVal("fbs", "k1.bla")); // Cannot read metaVal for key that doesn't exist
+      System.out.println(stub.readVal("user.bla", "k1.1")); // Nonexistant user cannot read val
+      System.out.println(stub.readMetaVal("user.bla", "k1.1")); // Nonexistant user cannot read metaVal
+      // Ensure write functions fail correctly
+      System.out.println(stub.writeVal("fbs", "k2.1", "v.bla")); // Cannot write val without direct or indirect access (owner)
+      System.out.println(stub.writeVal("fbs", "k1.1", "v.bla")); // Cannot write val without direct or indirect access (not owner)
+      System.out.println(stub.writeMetaVal("fbs", "k1.1", new ClientACLObject("fbs"))); // Cannot write metaVal if not owner
+      System.out.println(stub.writeVal("fbs", "k1.bla", "v.bla")); // Cannot write val for key that doesn't exist
+      System.out.println(stub.writeMetaVal("fbs", "k1.bla", new ClientACLObject("fbs"))); // Cannot write metaVal for key that doesn't exist
+      System.out.println(stub.writeVal("user.bla", "k1.1", "v.bla")); // Nonexistant user cannot write val
+      System.out.println(stub.writeMetaVal("user.bla", "k1.1", new ClientACLObject("user.bla"))); // Nonexistant user cannot write metaVal
+      // Ensure delete functions fail correctly
+      System.out.println(stub.delete("user1", "k2.1")); // Cannot delete key you don't own
+
     } catch (Exception e) {
       System.out.println(e);
     }

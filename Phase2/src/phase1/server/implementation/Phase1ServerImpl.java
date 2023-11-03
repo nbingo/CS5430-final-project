@@ -98,7 +98,7 @@ public class Phase1ServerImpl<K extends Serializable, V extends Serializable, M 
    * @param idNonce The concatenated userID and nonce string.
    * @return Just the userID.
    */
-  private String extractId(String idNonce) {
+  protected String extractId(String idNonce) {
     return idNonce.substring(0, idNonce.length()-36);
   }
 
