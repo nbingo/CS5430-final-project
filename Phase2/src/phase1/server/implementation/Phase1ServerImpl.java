@@ -30,6 +30,10 @@ public class Phase1ServerImpl<K extends Serializable, V extends Serializable, M 
 
   protected final Phase0Impl<K, V, M> store;
 
+
+  /**
+  * Phase1ServerImpl constructor. Calls the constructor of Phase1ServerImplBase and then creates a hashtable in which to store the active users and their public keys and the key store itself. 
+  */
   public Phase1ServerImpl() throws IOException {
     super();
     this.signingKey = super.signingKey;
@@ -37,6 +41,7 @@ public class Phase1ServerImpl<K extends Serializable, V extends Serializable, M 
     this.activeUsers = new Hashtable<>();
     this.store = new Phase0Impl<>();
   }
+
 
   /**
    * Take an encoded private key as a byte array and provide it as a PrivateKey object via DSA.
@@ -49,6 +54,7 @@ public class Phase1ServerImpl<K extends Serializable, V extends Serializable, M 
     return KeyFactory.getInstance("DSA").generatePrivate(new PKCS8EncodedKeySpec(privateBytes));
   }
 
+
   /**
    * Take an encoded public key as a byte array and provide it as a PublicKey object via DSA.
    * @param publicBytes The encoded DSA public key to use.
@@ -59,6 +65,7 @@ public class Phase1ServerImpl<K extends Serializable, V extends Serializable, M 
   private PublicKey createPublicKey(byte[] publicBytes) throws NoSuchAlgorithmException, InvalidKeySpecException {
     return KeyFactory.getInstance("DSA").generatePublic(new X509EncodedKeySpec(publicBytes));
   }
+
 
   /**
    * Create a signature using the given private/signing key to sign the given contents.
@@ -75,6 +82,7 @@ public class Phase1ServerImpl<K extends Serializable, V extends Serializable, M 
     server_sign.update(contents); // For now – add security later
     return server_sign.sign();
   }
+
 
   /**
    * Verify a signature against some contents with a given public/verification key.
@@ -93,6 +101,7 @@ public class Phase1ServerImpl<K extends Serializable, V extends Serializable, M 
     return sign.verify(signature);
   }
 
+
   /**
    * Take a concatenated userID and nonce string to extract just the userID from it.
    * @param idNonce The concatenated userID and nonce string.
@@ -101,6 +110,7 @@ public class Phase1ServerImpl<K extends Serializable, V extends Serializable, M 
   protected String extractId(String idNonce) {
     return idNonce.substring(0, idNonce.length()-36);
   }
+
 
   /**
    * Take a key, value, meta-value triple and use the fact that they're serializable to convert them to a byte array.
@@ -121,7 +131,22 @@ public class Phase1ServerImpl<K extends Serializable, V extends Serializable, M 
     return byteStream.toByteArray();
   }
 
-  // TODO: Add Javadocs for me!
+
+  /**
+   * Creates a signed AuthenticatedDoResponse for the given request, key, value, metaValue, and outcome
+   * 
+   * @param req The request the server is responding to
+   * @param key The key to sign
+   * @param val The value to sign
+   * @param metaVal The metaValue to sign
+   * @param outcome The outcome of the request
+   * @return An AuthenticatedDoResponse for the given request wth the outcome object and the signed contents of the response
+   * @throws IOException
+   * @throws NoSuchAlgorithmException
+   * @throws InvalidKeyException
+   * @throws SignatureException
+   * @throws InvalidKeySpecException
+   */
   protected AuthenticatedDoResponse<K, V, M> getSignedAuthenticatedDoResponse(AbstractAuthenticatedDoRequest<K, V, M> req, K key, V val, M metaVal, DoOperationOutcome.Outcome outcome) throws IOException, NoSuchAlgorithmException, InvalidKeyException, SignatureException, InvalidKeySpecException {
     // Put the resulting key, value, and meta-value in our do operation outcome, along with the outcome status. If we
     // performed a read operation, then the value or meta-value, whichever was requested, is changed and returned via
@@ -200,6 +225,7 @@ public class Phase1ServerImpl<K extends Serializable, V extends Serializable, M 
       return null;
     }
   }
+
 
   /**
    * Handle a DoRequest, which may be to create/delete a K,V,M triple, or read to/write from a K,V,M triple. This will

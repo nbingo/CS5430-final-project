@@ -30,6 +30,7 @@ public class Phase1StubImpl<K extends Serializable, V extends Serializable, M ex
 
   private final Hashtable<String, KeyPair> userKeys;
 
+
   /**
   * Phase1StubImpl constructor. Calls the constructor of Phase1StubBase and then creates a hashtable in which to store user keys. 
   */
@@ -38,6 +39,7 @@ public class Phase1StubImpl<K extends Serializable, V extends Serializable, M ex
     this.serverVerificationKey = super.serverVerificationKey;
     this.userKeys = new Hashtable<>();
   }
+
 
   /**
   * Converts encoded public keys (byte arrays) to PublicKey objects.
@@ -50,6 +52,7 @@ public class Phase1StubImpl<K extends Serializable, V extends Serializable, M ex
   private PublicKey createPublicKey(byte[] publicBytes) throws NoSuchAlgorithmException, InvalidKeySpecException {
     return KeyFactory.getInstance("DSA").generatePublic(new X509EncodedKeySpec(publicBytes));
   }
+
 
   /**
    * Signs the passed in contents with the passed in private key
@@ -67,6 +70,7 @@ public class Phase1StubImpl<K extends Serializable, V extends Serializable, M ex
     server_sign.update(contents);
     return server_sign.sign();
   }
+
 
   /**
    * Uses the passed in public key to ensure that the signature is the given contents signed with the corresponding private key
@@ -99,6 +103,7 @@ public class Phase1StubImpl<K extends Serializable, V extends Serializable, M ex
     return keyPairGenerator.generateKeyPair();
   }
 
+
   /**
    * Convert the given key, value, and meta-value to a byte array
    * 
@@ -118,6 +123,7 @@ public class Phase1StubImpl<K extends Serializable, V extends Serializable, M ex
 
     return byteStream.toByteArray();
   }
+
 
   /**
    * Verify the signature in the AbstractAuthenticatedDoResponse
@@ -146,6 +152,7 @@ public class Phase1StubImpl<K extends Serializable, V extends Serializable, M ex
     return this.verifySignature(this.createPublicKey(this.serverVerificationKey), buffer.array(), response.digitalSignature);
   }
 
+
   /**
    * Extract the userId from the given userId / nonce string
    * 
@@ -155,6 +162,7 @@ public class Phase1StubImpl<K extends Serializable, V extends Serializable, M ex
   private String extractId(String idNonce) {
     return idNonce.substring(0, idNonce.length()-36);
   }
+
 
   /**
    * Given a userId, unique nonce, doOperation, and mode create the necessary signature and send a AuthenticatedDoRequest to the network
@@ -180,6 +188,7 @@ public class Phase1StubImpl<K extends Serializable, V extends Serializable, M ex
     return this.network.handleAuthenticatedDo(req);
   }
   
+
   /**
    * Add a unique nonce to the given userId
    * 
@@ -189,6 +198,7 @@ public class Phase1StubImpl<K extends Serializable, V extends Serializable, M ex
   private String addNonce(String userId) {
     return userId + UUID.randomUUID();
   }
+
 
   /**
    * Return whether a write request was successful or throw the appropriate error
@@ -211,6 +221,7 @@ public class Phase1StubImpl<K extends Serializable, V extends Serializable, M ex
     }
   }
 
+
   /** 
    * Combine the userId, unique nonce, and function specific contents into a single byte array
    * 
@@ -226,11 +237,13 @@ public class Phase1StubImpl<K extends Serializable, V extends Serializable, M ex
     return buffer.array();
   }
 
+
   /**
    * Send a registration request to the server for a user with the given userId
    * 
    * @param userId The userId to register
    * @return A boolean describing if the registration is successful
+   * @throws RemoteException
    */
   public Boolean registerUser(String userId) throws RemoteException {
     try {
@@ -274,6 +287,7 @@ public class Phase1StubImpl<K extends Serializable, V extends Serializable, M ex
     }
   }
   
+
   /**
    * Send a request to the server for the userId to create the given key, value, meta-value to create
    * 
@@ -302,6 +316,7 @@ public class Phase1StubImpl<K extends Serializable, V extends Serializable, M ex
     }
   }
 
+
   /**
    * Delete the given key from the store for the specified user
    * 
@@ -329,6 +344,7 @@ public class Phase1StubImpl<K extends Serializable, V extends Serializable, M ex
       return false;
     }
   }
+
 
   /**
    * Returns the value associated with the given key for the given user
@@ -414,6 +430,7 @@ public class Phase1StubImpl<K extends Serializable, V extends Serializable, M ex
     }
   }
 
+
   /**
    * Write the new value to the store for the given key for the given user
    * 
@@ -421,7 +438,8 @@ public class Phase1StubImpl<K extends Serializable, V extends Serializable, M ex
    * @param key The key whose value should be changed
    * @param newVal The new value to write
    * @return True if the write is successful and false otherwise
-   * @throws
+   * @throws RemoteException
+   * @throws IllegalArgumentException
    */
   public Boolean writeVal(String userId, K key, V newVal) throws RemoteException, IllegalArgumentException {
     try {
@@ -441,6 +459,7 @@ public class Phase1StubImpl<K extends Serializable, V extends Serializable, M ex
       return false;
     }
   }
+
 
   /**
    * Write the new meta-value to the store for the given key for the given user
