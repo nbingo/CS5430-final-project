@@ -3,6 +3,7 @@ package types.acl.implementation;
 import types.acl.AbstractServerACLObject;
 
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Set;
 
