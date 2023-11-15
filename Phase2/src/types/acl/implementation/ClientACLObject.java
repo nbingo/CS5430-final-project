@@ -4,10 +4,7 @@ import types.acl.AbstractClientACLObject;
 
 import java.io.Serializable;
 import java.lang.reflect.Array;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.Hashtable;
-import java.util.Set;
+import java.util.*;
 
 public class ClientACLObject<K extends Serializable> extends AbstractClientACLObject  {
 
@@ -21,7 +18,7 @@ public class ClientACLObject<K extends Serializable> extends AbstractClientACLOb
      * ClientACLObject constructor that takes an owner, readers list, writers list, and indirects list
      * Sets each list to null if none is provided
      */
-    public ClientACLObject(String o, ArrayList<String> r, ArrayList<String> w, ArrayList<K> i) {
+    public ClientACLObject(String o, Collection<String> r, Collection<String> w, Collection<K> i) {
         readers = r == null ? new HashSet<String>() : new HashSet<String>(r);
         writers = w == null ? new HashSet<String>() : new HashSet<String>(w);
         indirects = i == null ? new HashSet<K>() : new HashSet<K>(i);
@@ -77,4 +74,5 @@ public class ClientACLObject<K extends Serializable> extends AbstractClientACLOb
     public Set<K> getIndirects() {
         return this.indirects;
     }
+
 }

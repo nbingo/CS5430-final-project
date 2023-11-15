@@ -52,7 +52,9 @@ v1.3
 v1.2
 v2.1
 v2.2
-types.acl.implementation.ClientACLObject@1442d7b5
+[user1]
+[user1]
+[]
 true
 true
 true

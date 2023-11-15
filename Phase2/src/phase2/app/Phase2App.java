@@ -22,6 +22,7 @@ import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.NoSuchElementException;
 
 public class Phase2App {
@@ -105,23 +106,25 @@ public class Phase2App {
       // Test registration
       sampleTestRegister(stub, "user1");
       // Test create
-      System.out.println(stub.create("user1", "k1.1", "v1.1", new ClientACLObject("user1", new ArrayList<String>(Arrays.asList("user1")), new ArrayList<String>(Arrays.asList("user1")), null))); // Create key with owner in readers and writers
-      System.out.println(stub.create("user1", "k1.2", "v1.2", new ClientACLObject("user1", null, null, new ArrayList<String>(Arrays.asList("k1.1"))))); // Create key with owner gaining access through indirects
-      System.out.println(stub.create("user1", "k1.1", "v1.3", new ClientACLObject("user1", new ArrayList<String>(Arrays.asList("user1")), new ArrayList<String>(Arrays.asList("user1")), null))); // Create key that exists already as owner
-      System.out.println(stub.create("fbs", "k2.1", "v2.1", new ClientACLObject("fbs", new ArrayList<String>(Arrays.asList("fbs", "user1")), new ArrayList<String>(Arrays.asList("fbs", "user1")), null))); // Create key with two users (including owner) in readers and writers
-      System.out.println(stub.create("fbs", "k2.2", "v2.2", new ClientACLObject("fbs", null, null, new ArrayList<String>(Arrays.asList("k1.1"))))); // Create key with another user gaining access through indirects
+      System.out.println(createEntry(stub, "user1", "k1.1", "v1.1", new ArrayList<String>(Arrays.asList("user1")), new ArrayList<String>(Arrays.asList("user1")), null)); // Create key with owner in readers and writers
+      System.out.println(createEntry(stub, "user1", "k1.2", "v1.2", null, null, new ArrayList<String>(Arrays.asList("k1.1")))); // Create key with owner gaining access through indirects
+      System.out.println(createEntry(stub, "user1", "k1.1", "v1.3", new ArrayList<String>(Arrays.asList("user1")), new ArrayList<String>(Arrays.asList("user1")), null)); // Create key that exists already as owner
+      System.out.println(createEntry(stub, "fbs", "k2.1", "v2.1", new ArrayList<String>(Arrays.asList("fbs", "user1")), new ArrayList<String>(Arrays.asList("fbs", "user1")), null)); // Create key with two users (including owner) in readers and writers
+      System.out.println(createEntry(stub, "fbs", "k2.2", "v2.2", null, null, new ArrayList<String>(Arrays.asList("k1.1")))); // Create key with another user gaining access through indirects
       // Test read functions
       System.out.println(stub.readVal("user1", "k1.1")); // Read val direct access (owner)
       System.out.println(stub.readVal("user1", "k1.2")); // Read val with indirect access (owner)
       System.out.println(stub.readVal("user1", "k2.1")); // Read val with direct access (not owner)
       System.out.println(stub.readVal("user1", "k2.2")); // Read val with indirect access (not owner)
-      System.out.println(stub.readMetaVal("user1", "k1.1")); // Read metaVal as owner
+      System.out.println(readACLReaders(stub, "user1", "k1.1")); // Read metaVal readers as owner
+      System.out.println(readACLWriters(stub, "user1", "k1.1")); // Read metaVal writers as owner
+      System.out.println(readACLIndirects(stub, "user1", "k1.1")); // Read metaVal indirects as owner
       // Test write functions and read resulting functions to ensure changes sucessful
       System.out.println(stub.writeVal("user1", "k1.1", "v1.1.2")); // Write val direct access (owner)
       System.out.println(stub.writeVal("user1", "k1.2", "v1.2.2")); // Write val with indirect access (owner)
       System.out.println(stub.writeVal("user1", "k2.1", "v2.1.2")); // Write val with direct access (not owner)
       System.out.println(stub.writeVal("user1", "k2.2", "v2.2.2")); // Write val with indirect access (not owner)
-      System.out.println(stub.writeMetaVal("fbs", "k2.1", new ClientACLObject("fbs"))); // Write metaVal as owner
+      System.out.println(writeACL(stub, "fbs", "k2.1", new ArrayList<String>(), new ArrayList<String>(), null)); // Write metaVal as owner
       // Test delete functions
       System.out.println(stub.delete("user1", "k1.1")); // Delete key user owns
       System.out.println(stub.delete("user1", "k1.1")); // Delete key that doesn't exist
@@ -132,23 +135,24 @@ public class Phase2App {
       System.out.println(stub.registerUser("user1"));
       // Ensure create functions fail correctly
       System.out.println(stub.create("user1", "k1.3", "v1.3", new ClientACLObject("fbs"))); // Cannot create key with another user as owner
-      System.out.println(stub.create("fbs", "k1.2", "v2.2", new ClientACLObject("fbs"))); // Cannot create key that exists already if not owner
-      System.out.println(stub.create("user.bla", "k.bla", "v.bla", new ClientACLObject("user.bla"))); // Nonexistant user cannot create key
+      System.out.println(createEntry(stub, "fbs", "k1.2", "v2.2", null, null, null)); // Cannot create key that exists already if not owner
+      System.out.println(createEntry(stub, "user.bla", "k.bla", "v.bla", null, null, null)); // Nonexistant user cannot create key
       // Ensure read functions fail correctly
       System.out.println(stub.readVal("fbs", "k2.1")); // Cannot read val without direct or indirect access (owner)
       System.out.println(stub.readVal("fbs", "k1.1")); // Cannot read val without direct or indirect access (not owner)
-      System.out.println(stub.readMetaVal("fbs", "k1.1")); // Cannot read metaVal if not owner
+      System.out.println(readACLReaders(stub, "fbs", "k1.1")); // Cannot read metaVal if not owner
       System.out.println(stub.readVal("fbs", "k1.bla")); // Cannot read val for key that doesn't exist
-      System.out.println(stub.readMetaVal("fbs", "k1.bla")); // Cannot read metaVal for key that doesn't exist
+      System.out.println(readACLWriters(stub, "fbs", "k1.bla")); // Cannot read metaVal for key that doesn't exist
       System.out.println(stub.readVal("user.bla", "k1.1")); // Nonexistant user cannot read val
-      System.out.println(stub.readMetaVal("user.bla", "k1.1")); // Nonexistant user cannot read metaVal
+      System.out.println(readACLIndirects(stub, "user.bla", "k1.1")); // Nonexistant user cannot read metaVal
       // Ensure write functions fail correctly
       System.out.println(stub.writeVal("fbs", "k2.1", "v.bla")); // Cannot write val without direct or indirect access (owner)
       System.out.println(stub.writeVal("fbs", "k1.1", "v.bla")); // Cannot write val without direct or indirect access (not owner)
-      System.out.println(stub.writeMetaVal("fbs", "k1.1", new ClientACLObject("fbs"))); // Cannot write metaVal if not owner
+      System.out.println(writeACL(stub, "fbs", "k1.1", null, null, null)); // Cannot write metaVal if not owner
       System.out.println(stub.writeVal("fbs", "k1.bla", "v.bla")); // Cannot write val for key that doesn't exist
-      System.out.println(stub.writeMetaVal("fbs", "k1.bla", new ClientACLObject("fbs"))); // Cannot write metaVal for key that doesn't exist
+      System.out.println(writeACL(stub, "fbs", "k1.bla", null, null, null)); // Cannot write metaVal for key that doesn't exist
       System.out.println(stub.writeVal("user.bla", "k1.1", "v.bla")); // Nonexistant user cannot write val
+      System.out.println(writeACL(stub, "user.bla", "k1.1", null, null, null)); // Nonexistant user cannot write metaVal
       System.out.println(stub.writeMetaVal("user.bla", "k1.1", new ClientACLObject("user.bla"))); // Nonexistant user cannot write metaVal
       // Ensure delete functions fail correctly
       System.out.println(stub.delete("user1", "k2.1")); // Cannot delete key you don't own
@@ -172,4 +176,58 @@ public class Phase2App {
       System.exit(5);
     }
   }
+
+  public static Boolean createEntry(Phase1Stub<String, Serializable, AbstractClientACLObject> stub,
+                                    String userId, String key, Serializable val,
+                                    Collection<String> readers, Collection<String> writers, Collection<String> indirects) {
+    try {
+      return stub.create(userId, key, val, new ClientACLObject(userId, readers, writers, indirects));
+    } catch (Exception e) {
+      return false;
+    }
+  }
+
+  public static Collection<String> readACLReaders(Phase1Stub<String, Serializable, AbstractClientACLObject> stub,
+                                                  String userId, String key) {
+    try {
+      ClientACLObject metaVal = (ClientACLObject) stub.readMetaVal(userId, key);
+      return metaVal.getReaders();
+    } catch (Exception e) {
+      return null;
+    }
+  }
+
+  public static Collection<String> readACLWriters(Phase1Stub<String, Serializable, AbstractClientACLObject> stub,
+                                                  String userId, String key) {
+    try {
+      ClientACLObject metaVal = (ClientACLObject) stub.readMetaVal(userId, key);
+      return metaVal.getWriters();
+    } catch (Exception e) {
+      return null;
+    }
+  }
+
+  public static Collection<String> readACLIndirects(Phase1Stub<String, Serializable, AbstractClientACLObject> stub,
+                                                    String userId, String key) {
+    try {
+      ClientACLObject metaVal = (ClientACLObject) stub.readMetaVal(userId, key);
+      return metaVal.getIndirects();
+    } catch (Exception e) {
+      return null;
+    }
+  }
+
+  public static Boolean writeACL(Phase1Stub<String, Serializable, AbstractClientACLObject> stub,
+                                 String userId, String key,
+                                 Collection<String> readers, Collection<String> writers, Collection<String> indirects) {
+    try {
+      ClientACLObject metaVal = (ClientACLObject) stub.readMetaVal(userId, key);
+      ClientACLObject newMetaVal = new ClientACLObject<>(userId, readers == null ? metaVal.getReaders() : readers, writers == null ? metaVal.getWriters() : writers, indirects == null ? metaVal.getIndirects() : indirects);
+
+      return stub.writeMetaVal(userId, key, newMetaVal);
+    } catch (Exception e) {
+      return false;
+    }
+  }
+
 }
